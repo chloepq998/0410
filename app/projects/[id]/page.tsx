@@ -19,6 +19,7 @@ import HighlightPanel from "@/components/HighlightPanel";
 import TimelineEditor from "@/components/TimelineEditor";
 import ProjectNameEditor from "@/components/ProjectNameEditor";
 import VersionHistoryPanel from "@/components/VersionHistoryPanel";
+import LicenseInfoPanel from "@/components/LicenseInfoPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -181,6 +182,17 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Card>
       )}
 
+      {/* 리소스 출처 및 라이선스 */}
+      {project.draft && (
+        <Card>
+          <SectionHeader
+            title="리소스 출처 및 라이선스"
+            description="적용된 음악/효과음/폰트의 출처와 라이선스 조건을 확인할 수 있습니다. 라이선스 제약이 있는 리소스는 경고와 함께 표시됩니다."
+          />
+          <LicenseInfoPanel draft={project.draft} template={selectedTemplate} />
+        </Card>
+      )}
+
       {/* 실제 영상 렌더링 */}
       {project.draft && selectedTemplate && (
         <Card>
@@ -189,7 +201,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             description="업로드한 소스와 자막/BGM/전환 설정을 합성해 실제 영상 파일을 생성합니다."
           />
           {hasRealSources ? (
-            <RenderPanel projectId={project.id} render={project.render} />
+            <RenderPanel projectId={project.id} render={project.render} draft={project.draft} template={selectedTemplate} />
           ) : (
             <p className="text-sm text-neutral-400">
               실제 업로드된 소스 파일(사진/영상)이 없어 렌더링할 수 없습니다. 새 프로젝트를 만들 때 파일을 직접 업로드해주세요.

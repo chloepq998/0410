@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { startRenderAction, checkRenderStatusAction } from "@/lib/actions/render";
 import { Badge, Button } from "@/components/ui";
-import type { Render } from "@/lib/types";
+import LicenseInfoPanel from "@/components/LicenseInfoPanel";
+import type { Draft, Render, Template } from "@/lib/types";
 
 const ASPECT_RATIO_OPTIONS: { value: string; label: string }[] = [
   { value: "9:16", label: "9:16 (세로, 숏폼 권장)" },
@@ -33,7 +34,17 @@ function formatElapsed(startedAt?: string): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function RenderPanel({ projectId, render }: { projectId: string; render?: Render }) {
+export default function RenderPanel({
+  projectId,
+  render,
+  draft,
+  template,
+}: {
+  projectId: string;
+  render?: Render;
+  draft?: Draft;
+  template?: Template;
+}) {
   const router = useRouter();
   const polling = render?.status === "대기중" || render?.status === "렌더링중";
   const [elapsed, setElapsed] = useState(() => formatElapsed(render?.startedAt));
@@ -103,6 +114,13 @@ export default function RenderPanel({ projectId, render }: { projectId: string; 
           </p>
         </div>
       )}
+
+      <div className="rounded-lg border border-neutral-200 p-3">
+        <p className="text-sm font-medium text-neutral-700">내보내기 포함 리소스 라이선스 요약</p>
+        <div className="mt-2">
+          <LicenseInfoPanel draft={draft} template={template} />
+        </div>
+      </div>
 
       <form
         action={startRenderAction.bind(null, projectId)}

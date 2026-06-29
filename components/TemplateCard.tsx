@@ -66,7 +66,7 @@ export default function TemplateCard({
           <li>자막 스타일: {template.fontStyle}</li>
           <li>전환 효과: {template.elements.transition ? "있음" : "없음"}</li>
           <li>색감: {template.colorTheme.join(", ")}</li>
-          <li>음악 분위기: {bgm ? `${bgm.mood} (${bgm.name})` : "기본"}</li>
+          <li>음악 분위기: {bgm ? `${bgm.mood} (${bgm.name}) · ${bgm.license}` : "기본"}</li>
         </ul>
       </div>
 

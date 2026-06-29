@@ -4,6 +4,7 @@ import { useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { updateDraftAction } from "@/lib/actions/projects";
 import { SFX_OPTIONS, recommendBgmList } from "@/lib/ai/bgm-options";
+import { LICENSE_WARNING_TEXT } from "@/lib/ai/license";
 import { Button } from "@/components/ui";
 import type { Draft, Mood } from "@/lib/types";
 
@@ -28,6 +29,12 @@ export default function DraftEditForm({
 
   const sortedBgmOptions = recommendBgmList(mood);
   const recommendedBgmId = sortedBgmOptions[0]?.id;
+
+  const [bgmId, setBgmId] = useState(draft.bgmId);
+  const [sfxId, setSfxId] = useState(draft.sfxId ?? "");
+
+  const selectedBgm = sortedBgmOptions.find((b) => b.id === bgmId);
+  const selectedSfx = SFX_OPTIONS.find((s) => s.id === sfxId);
 
   async function handleBgmUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -59,7 +66,12 @@ export default function DraftEditForm({
     <form action={updateDraftAction.bind(null, projectId)} className="space-y-4">
       <div>
         <p className="text-sm font-medium text-neutral-700">배경 음악 (영상 분위기 기반 추천)</p>
-        <select name="bgmId" defaultValue={draft.bgmId} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
+        <select
+          name="bgmId"
+          value={bgmId}
+          onChange={(e) => setBgmId(e.target.value)}
+          className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+        >
           {sortedBgmOptions.map((b) => (
             <option key={b.id} value={b.id}>
               {b.id === recommendedBgmId ? "⭐ 추천 · " : ""}
@@ -67,6 +79,16 @@ export default function DraftEditForm({
             </option>
           ))}
         </select>
+        {selectedBgm && (
+          <p className="mt-1 text-xs text-neutral-400">
+            출처: {selectedBgm.source} · {selectedBgm.licenseDetail}
+          </p>
+        )}
+        {selectedBgm?.license === "개인용만" && (
+          <div className="mt-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700">
+            {LICENSE_WARNING_TEXT}
+          </div>
+        )}
 
         <div className="mt-2 grid grid-cols-2 gap-2">
           <label className="block text-xs text-neutral-500">
@@ -130,14 +152,29 @@ export default function DraftEditForm({
 
       <div>
         <p className="text-sm font-medium text-neutral-700">강조 구간 효과음 (영상 분위기 기반 추천)</p>
-        <select name="sfxId" defaultValue={draft.sfxId ?? ""} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
+        <select
+          name="sfxId"
+          value={sfxId}
+          onChange={(e) => setSfxId(e.target.value)}
+          className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+        >
           <option value="">사용 안 함</option>
           {SFX_OPTIONS.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.name} — {s.description}
+              {s.name} — {s.description} ({s.license})
             </option>
           ))}
         </select>
+        {selectedSfx && (
+          <p className="mt-1 text-xs text-neutral-400">
+            출처: {selectedSfx.source} · {selectedSfx.licenseDetail}
+          </p>
+        )}
+        {selectedSfx?.license === "개인용만" && (
+          <div className="mt-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700">
+            {LICENSE_WARNING_TEXT}
+          </div>
+        )}
 
         <div className="mt-3 rounded-lg border border-dashed border-neutral-300 p-3">
           <label className="block text-xs font-medium text-neutral-600">실제 렌더링에 쓸 효과음 파일 직접 업로드 (선택)</label>
