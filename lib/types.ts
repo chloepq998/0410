@@ -10,6 +10,16 @@ export interface SourceFile {
   url?: string;
 }
 
+export interface SourceMedia {
+  id: string;
+  name: string;
+  kind: "photo" | "video";
+  url: string;
+  sizeBytes: number;
+  durationSec?: number;
+  createdAt: string;
+}
+
 export interface Template {
   id: string;
   name: string;

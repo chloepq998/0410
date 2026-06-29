@@ -12,6 +12,7 @@ import type {
   PlatformConnection,
   Project,
   Reference,
+  SourceMedia,
 } from "@/lib/types";
 
 interface Database {
@@ -21,6 +22,7 @@ interface Database {
   calendarItems: CalendarItem[];
   metrics: ContentMetric[];
   platformConnection: PlatformConnection;
+  sources: SourceMedia[];
 }
 
 declare global {
@@ -192,6 +194,7 @@ function createSeedDb(): Database {
     calendarItems: buildSeedCalendar(),
     metrics: buildSeedMetrics(),
     platformConnection: { platform: "틱톡", connected: true, connectedAt: new Date().toISOString() },
+    sources: [],
   };
 }
 
@@ -222,7 +225,10 @@ const loadDb = cache(async (): Promise<Database> => {
   }
 
   const existing = await readBlobDb();
-  if (existing) return existing;
+  if (existing) {
+    existing.sources ??= [];
+    return existing;
+  }
 
   const seeded = createSeedDb();
   await writeBlobDb(seeded);
@@ -356,5 +362,30 @@ export async function setPlatformConnection(connected: boolean): Promise<void> {
     connected,
     connectedAt: connected ? new Date().toISOString() : undefined,
   };
+  await persist(db);
+}
+
+// Source media library
+export async function listSources(): Promise<SourceMedia[]> {
+  const db = await loadDb();
+  return [...db.sources].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export async function addSource(source: SourceMedia): Promise<void> {
+  const db = await loadDb();
+  db.sources.unshift(source);
+  await persist(db);
+}
+
+export async function updateSource(id: string, patch: Partial<SourceMedia>): Promise<void> {
+  const db = await loadDb();
+  const idx = db.sources.findIndex((s) => s.id === id);
+  if (idx !== -1) db.sources[idx] = { ...db.sources[idx], ...patch };
+  await persist(db);
+}
+
+export async function deleteSource(id: string): Promise<void> {
+  const db = await loadDb();
+  db.sources = db.sources.filter((s) => s.id !== id);
   await persist(db);
 }

@@ -3,12 +3,30 @@
 import { useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { autoEditAction } from "@/lib/actions/projects";
+import { addSourceAction } from "@/lib/actions/sources";
+import { classifySourceKind, getVideoDuration, validateSourceFile } from "@/lib/upload-validation";
 import { Button, Card } from "@/components/ui";
 
 export default function NewProjectForm() {
   const [files, setFiles] = useState<File[]>([]);
   const [stage, setStage] = useState<"idle" | "uploading" | "editing">("idle");
   const [error, setError] = useState<string | null>(null);
+
+  function handleFilesSelected(fileList: FileList | null) {
+    const selected = Array.from(fileList ?? []);
+    const valid: File[] = [];
+    const errors: string[] = [];
+    for (const file of selected) {
+      const invalidReason = validateSourceFile(file);
+      if (invalidReason) {
+        errors.push(invalidReason);
+      } else {
+        valid.push(file);
+      }
+    }
+    setFiles(valid);
+    setError(errors.length > 0 ? errors.join(" ") : null);
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,12 +46,12 @@ export default function NewProjectForm() {
           const blob = await upload(file.name, file, {
             access: "public",
             handleUploadUrl: "/api/upload",
+            multipart: true,
           });
-          return {
-            name: file.name,
-            kind: file.type.startsWith("video/") ? "video" : "photo",
-            url: blob.url,
-          };
+          const kind = classifySourceKind(file);
+          const durationSec = await getVideoDuration(file);
+          await addSourceAction({ name: file.name, kind, url: blob.url, sizeBytes: file.size, durationSec });
+          return { name: file.name, kind, url: blob.url };
         })
       );
       formData.set("sourceFiles", JSON.stringify(sourceFiles));
@@ -76,10 +94,13 @@ export default function NewProjectForm() {
             type="file"
             multiple
             accept="image/*,video/*"
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+            onChange={(e) => handleFilesSelected(e.target.files)}
             className="mt-1 block w-full text-sm text-neutral-600"
           />
-          <p className="mt-1 text-xs text-neutral-400">권장 비율 9:16. 업로드한 영상/사진은 실제 자동 편집(하이라이트·자막·BGM 합성)에 사용됩니다.</p>
+          <p className="mt-1 text-xs text-neutral-400">
+            권장 비율 9:16. MP4, MOV, AVI 영상 또는 이미지 파일, 최대 5GB까지 업로드할 수 있어요. 업로드한 영상/사진은 실제 자동
+            편집(하이라이트·자막·BGM 합성)에 사용되며, &ldquo;원본 소스&rdquo; 목록에도 자동으로 등록됩니다.
+          </p>
           {files.length > 0 && (
             <ul className="mt-2 list-inside list-disc text-xs text-neutral-500">
               {files.map((f) => (

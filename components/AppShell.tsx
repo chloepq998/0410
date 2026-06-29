@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { href: "/", label: "대시보드", icon: "🏠" },
   { href: "/projects", label: "콘텐츠 프로젝트", icon: "🎬" },
+  { href: "/sources", label: "원본 소스", icon: "📁" },
   { href: "/personalization", label: "개인화 학습", icon: "🧠" },
   { href: "/calendar", label: "기획 캘린더", icon: "🗓️" },
   { href: "/analytics", label: "성과 분석", icon: "📊" },
