@@ -151,21 +151,17 @@ export async function updateDraftAction(projectId: string, formData: FormData) {
     | "중간"
     | "높음";
 
-  const captions: CaptionLine[] = project.draft.captions.map((c) => {
-    const text = formData.get(`caption_${c.id}_text`);
-    const position = formData.get(`caption_${c.id}_position`);
-    const style = formData.get(`caption_${c.id}_style`);
-    return {
-      ...c,
-      text: text !== null ? String(text) : c.text,
-      position: position !== null ? (String(position) as CaptionLine["position"]) : c.position,
-      style: style !== null ? (String(style) as CaptionLine["style"]) : c.style,
-    };
-  });
-
   await store.updateProject(projectId, {
-    draft: { ...project.draft, bgmId, bgmUrl, bgmVolume, transitionIntensity, captions },
+    draft: { ...project.draft, bgmId, bgmUrl, bgmVolume, transitionIntensity },
   });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+// CaptionPanel에서 인라인 편집(텍스트/타이밍/스타일)된 자막 전체를 한 번에 저장한다.
+export async function updateCaptionsAction(projectId: string, captions: CaptionLine[]) {
+  const project = await store.getProject(projectId);
+  if (!project?.draft) return;
+  await store.updateProject(projectId, { draft: { ...project.draft, captions } });
   revalidatePath(`/projects/${projectId}`);
 }
 

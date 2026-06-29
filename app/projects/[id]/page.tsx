@@ -12,6 +12,7 @@ import { TEMPLATE_CATEGORIES, TEMPLATE_LIBRARY } from "@/lib/ai/templates";
 import { Badge, Button, Card, SectionHeader } from "@/components/ui";
 import FeedbackForm from "@/components/FeedbackForm";
 import DraftEditForm from "@/components/DraftEditForm";
+import CaptionPanel from "@/components/CaptionPanel";
 import RenderPanel from "@/components/RenderPanel";
 import TemplateCard from "@/components/TemplateCard";
 import HighlightPanel from "@/components/HighlightPanel";
@@ -128,6 +129,17 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
             <DraftEditForm projectId={project.id} draft={project.draft} />
           </div>
+        </Card>
+      )}
+
+      {/* AI 자동 자막 생성 & 스타일 편집 */}
+      {project.draft && (
+        <Card>
+          <SectionHeader
+            title="AI 자동 자막 생성 & 스타일 편집"
+            description="음성을 분석해 시간 동기화된 자막을 자동 생성합니다. 텍스트를 직접 수정하고 프리셋/색상/크기/배경/위치를 조절할 수 있으며, 인식 정확도가 낮은 구간은 강조 표시됩니다."
+          />
+          <CaptionPanel projectId={project.id} captions={project.draft.captions} />
         </Card>
       )}
 

@@ -50,11 +50,21 @@ export interface Template {
   previewSummary: string;
 }
 
+export type CaptionPreset = "기본" | "강조" | "자막박스";
+export type CaptionFontSize = "작게" | "보통" | "크게";
+
 export interface CaptionLine {
   id: string;
   text: string;
+  start: number;
+  end: number;
+  confidence: number;
   position: "상단" | "중단" | "하단";
   style: "감성" | "미니멀" | "키치";
+  preset: CaptionPreset;
+  fontSize: CaptionFontSize;
+  color: string;
+  backgroundColor?: string;
 }
 
 export interface Draft {

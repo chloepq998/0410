@@ -28,33 +28,6 @@ export default function DraftEditForm({ projectId, draft }: { projectId: string;
   return (
     <form action={updateDraftAction.bind(null, projectId)} className="space-y-4">
       <div>
-        <p className="text-sm font-medium text-neutral-700">자막</p>
-        <div className="mt-2 space-y-3">
-          {draft.captions.map((c) => (
-            <div key={c.id} className="rounded-lg border border-neutral-200 p-3">
-              <input
-                name={`caption_${c.id}_text`}
-                defaultValue={c.text}
-                className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
-              />
-              <div className="mt-2 flex gap-2">
-                <select name={`caption_${c.id}_position`} defaultValue={c.position} className="rounded-md border border-neutral-300 px-2 py-1 text-xs">
-                  <option value="상단">상단</option>
-                  <option value="중단">중단</option>
-                  <option value="하단">하단</option>
-                </select>
-                <select name={`caption_${c.id}_style`} defaultValue={c.style} className="rounded-md border border-neutral-300 px-2 py-1 text-xs">
-                  <option value="감성">감성</option>
-                  <option value="미니멀">미니멀</option>
-                  <option value="키치">키치</option>
-                </select>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
         <p className="text-sm font-medium text-neutral-700">BGM</p>
         <select name="bgmId" defaultValue={draft.bgmId} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
           {BGM_OPTIONS.map((b) => (

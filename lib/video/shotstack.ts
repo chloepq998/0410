@@ -35,6 +35,12 @@ const TITLE_POSITION: Record<CaptionLine["position"], string> = {
   하단: "bottom",
 };
 
+const TITLE_SIZE: Record<CaptionLine["fontSize"], string> = {
+  작게: "small",
+  보통: "medium",
+  크게: "large",
+};
+
 function transitionFor(intensity: Draft["transitionIntensity"]): ShotstackClip["transition"] | undefined {
   if (intensity === "낮음") return undefined;
   if (intensity === "중간") return { in: "fade", out: "fade" };
@@ -49,10 +55,11 @@ const RESOLUTION_MAP: Record<RenderResolution, string> = {
 };
 
 // Maps our `Draft` (cut plan, captions, BGM) onto a Shotstack timeline. Source
-// files and captions carry no explicit timing, so clips/captions are spread
-// evenly across the project's target length. If a highlight selection exists
-// for one of the sources, that clip's playback is trimmed to the selected
-// window via Shotstack's `asset.trim` + a capped `length`.
+// files carry no explicit timing, so video clips are spread evenly across the
+// project's target length; captions instead use the start/end timecodes
+// already assigned during generation (see lib/ai/draft.ts). If a highlight
+// selection exists for one of the sources, that clip's playback is trimmed to
+// the selected window via Shotstack's `asset.trim` + a capped `length`.
 export function buildTimeline(
   project: Project,
   resolution: RenderResolution = "1080p",
@@ -91,15 +98,18 @@ export function buildTimeline(
     };
   });
 
-  const captionSegment = totalLength / draft.captions.length;
-  const captionClips: ShotstackClip[] = draft.captions.map((c, i) => ({
+  // 자막은 lib/ai/draft.ts에서 생성된 음성 동기화 타임코드(start/end)를 그대로 사용한다.
+  const captionClips: ShotstackClip[] = draft.captions.map((c) => ({
     asset: {
       type: "title",
       text: c.text,
       style: TITLE_STYLE[c.style],
+      size: TITLE_SIZE[c.fontSize],
+      color: c.color,
+      ...(c.backgroundColor ? { background: c.backgroundColor } : {}),
     },
-    start: i * captionSegment,
-    length: captionSegment,
+    start: c.start,
+    length: Math.max(0.1, c.end - c.start),
     position: TITLE_POSITION[c.position],
   }));
 
