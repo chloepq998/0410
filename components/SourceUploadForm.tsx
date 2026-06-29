@@ -68,10 +68,11 @@ export default function SourceUploadForm() {
 
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: "done", progress: 100 } : i)));
       router.refresh();
-    } catch {
+    } catch (error) {
+      const detail = error instanceof Error && error.message ? error.message : "알 수 없는 오류";
       setItems((prev) =>
         prev.map((i) =>
-          i.id === item.id ? { ...i, status: "error", error: "업로드에 실패했습니다. 다시 시도해주세요." } : i
+          i.id === item.id ? { ...i, status: "error", error: `업로드에 실패했습니다: ${detail}` } : i
         )
       );
     }
