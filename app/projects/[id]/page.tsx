@@ -6,12 +6,14 @@ import {
   generateMarketingAction,
   markProjectCompletedAction,
   regenerateTemplatesAction,
-  selectTemplateAction,
+  undoTemplateApplyAction,
 } from "@/lib/actions/projects";
+import { TEMPLATE_CATEGORIES, TEMPLATE_LIBRARY } from "@/lib/ai/templates";
 import { Badge, Button, Card, SectionHeader } from "@/components/ui";
 import FeedbackForm from "@/components/FeedbackForm";
 import DraftEditForm from "@/components/DraftEditForm";
 import RenderPanel from "@/components/RenderPanel";
+import TemplateCard from "@/components/TemplateCard";
 
 export const dynamic = "force-dynamic";
 
@@ -54,30 +56,41 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </Button>
           </form>
         </div>
+
+        {project.templateUndo && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <p className="text-xs text-amber-700">템플릿이 적용되어 스타일이 변경되었어요. 이전 스타일로 되돌릴 수 있어요.</p>
+            <form action={undoTemplateApplyAction.bind(null, project.id)}>
+              <Button type="submit" variant="secondary">
+                되돌리기
+              </Button>
+            </form>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {project.templates.map((t) => {
-            const selected = t.id === project.selectedTemplateId;
-            return (
-              <div key={t.id} className={`rounded-lg border p-4 ${selected ? "border-violet-500 bg-violet-50" : "border-neutral-200"}`}>
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge>{t.mood}</Badge>
-                  <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-600">{t.lengthSec}초</span>
-                  <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-600">{t.hookType}</span>
-                </div>
-                <p className="mt-2 text-sm font-medium text-neutral-900">{t.name}</p>
-                <p className="mt-1 text-xs text-neutral-500">{t.previewSummary}</p>
-                <p className="mt-2 text-xs text-neutral-400">
-                  포함 요소: {[t.elements.bgm && "BGM", t.elements.subtitle && "자막", t.elements.transition && "전환"].filter(Boolean).join(" · ")}
-                </p>
-                <form action={selectTemplateAction.bind(null, project.id, t.id)} className="mt-3">
-                  <Button type="submit" variant={selected ? "secondary" : "primary"} className="w-full" disabled={selected}>
-                    {selected ? "적용됨" : "이 템플릿 선택"}
-                  </Button>
-                </form>
-              </div>
-            );
-          })}
+          {project.templates.map((t) => (
+            <TemplateCard key={t.id} projectId={project.id} template={t} selected={t.id === project.selectedTemplateId} />
+          ))}
         </div>
+
+        <details className="rounded-lg border border-neutral-200">
+          <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-neutral-700">
+            전체 템플릿 둘러보기 (총 {TEMPLATE_LIBRARY.length}개, 카테고리별)
+          </summary>
+          <div className="space-y-4 border-t border-neutral-200 p-3">
+            {TEMPLATE_CATEGORIES.map((category) => (
+              <div key={category}>
+                <p className="text-xs font-medium text-neutral-500">{category}</p>
+                <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  {TEMPLATE_LIBRARY.filter((t) => t.category === category).map((t) => (
+                    <TemplateCard key={t.id} projectId={project.id} template={t} selected={t.id === project.selectedTemplateId} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
       </Card>
 
       {/* 2. 자동 편집 초안 + 간편 편집 */}

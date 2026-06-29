@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { nextId } from "@/lib/id";
 import * as store from "@/lib/store";
-import { generateTemplates } from "@/lib/ai/templates";
+import { generateTemplates, TEMPLATE_LIBRARY } from "@/lib/ai/templates";
 import { generateHookIdeas } from "@/lib/ai/hooks";
 import { generateMarketingSuggestions } from "@/lib/ai/marketing";
 import { generateDraft } from "@/lib/ai/draft";
@@ -13,9 +13,13 @@ import type { CaptionLine, Goal, LengthSec, Project, SourceFile, Template, Tone 
 
 const NO_TEMPLATE_STYLE: Omit<Template, "id" | "lengthSec"> = {
   name: "템플릿 없음 (기본 스타일)",
+  category: "정보",
   mood: "정보",
   hookType: "기본",
   elements: { bgm: true, subtitle: true, transition: false },
+  colorTheme: ["화이트", "그레이"],
+  fontStyle: "기본 산세리프",
+  bgmId: "bgm-lofi",
   previewSummary: "템플릿을 적용하지 않은 기본 자막/BGM 스타일입니다.",
 };
 
@@ -65,15 +69,43 @@ export async function autoEditAction(formData: FormData) {
   redirect(`/projects/${project.id}`);
 }
 
+// 추천 템플릿(project.templates)뿐 아니라 전체 템플릿 라이브러리에서도 적용할 수 있도록
+// 라이브러리에서 폴백 조회하고, 처음 적용되는 라이브러리 템플릿은 프로젝트에 추가해 기록한다.
+// 적용 직전 상태(이전 템플릿/초안)는 templateUndo에 스냅샷으로 남겨 한 단계 되돌리기를 지원한다.
 export async function selectTemplateAction(projectId: string, templateId: string) {
   const project = await store.getProject(projectId);
   if (!project) return;
-  const template = project.templates.find((t) => t.id === templateId);
-  if (!template) return;
+
+  let template = project.templates.find((t) => t.id === templateId);
+  let templates = project.templates;
+  if (!template) {
+    template = TEMPLATE_LIBRARY.find((t) => t.id === templateId);
+    if (!template) return;
+    templates = [...project.templates, template];
+  }
 
   const hookText = project.hookIdeas.find((h) => h.id === project.selectedHookId)?.text;
   const draft = generateDraft(template, hookText);
-  await store.updateProject(projectId, { selectedTemplateId: templateId, draft, status: "수정중" });
+  const templateUndo = { selectedTemplateId: project.selectedTemplateId, draft: project.draft };
+
+  await store.updateProject(projectId, {
+    templates,
+    selectedTemplateId: templateId,
+    draft,
+    status: "수정중",
+    templateUndo,
+  });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function undoTemplateApplyAction(projectId: string) {
+  const project = await store.getProject(projectId);
+  if (!project?.templateUndo) return;
+  await store.updateProject(projectId, {
+    selectedTemplateId: project.templateUndo.selectedTemplateId,
+    draft: project.templateUndo.draft,
+    templateUndo: undefined,
+  });
   revalidatePath(`/projects/${projectId}`);
 }
 
@@ -81,7 +113,12 @@ export async function regenerateTemplatesAction(projectId: string) {
   const project = await store.getProject(projectId);
   if (!project) return;
   const templates = generateTemplates({ goal: project.goal, tone: project.tone, targetLength: project.targetLength });
-  await store.updateProject(projectId, { templates, selectedTemplateId: undefined, draft: undefined });
+  await store.updateProject(projectId, {
+    templates,
+    selectedTemplateId: undefined,
+    draft: undefined,
+    templateUndo: undefined,
+  });
   revalidatePath(`/projects/${projectId}`);
 }
 

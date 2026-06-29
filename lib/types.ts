@@ -3,6 +3,7 @@ export type Tone = "발랄" | "진지" | "유머";
 export type LengthSec = 15 | 30 | 60;
 export type ProjectStatus = "초안" | "수정중" | "완료";
 export type Mood = "감성" | "정보" | "유머";
+export type TemplateCategory = "브이로그" | "제품 리뷰" | "정보" | "챌린지";
 
 export interface SourceFile {
   name: string;
@@ -23,10 +24,14 @@ export interface SourceMedia {
 export interface Template {
   id: string;
   name: string;
+  category: TemplateCategory;
   lengthSec: LengthSec;
   mood: Mood;
   hookType: string;
   elements: { bgm: boolean; subtitle: boolean; transition: boolean };
+  colorTheme: string[];
+  fontStyle: string;
+  bgmId: string;
   previewSummary: string;
 }
 
@@ -106,6 +111,7 @@ export interface Project {
   marketing?: MarketingSuggestions;
   feedback: FeedbackEntry[];
   render?: Render;
+  templateUndo?: { selectedTemplateId?: string; draft?: Draft };
   createdAt: string;
   updatedAt: string;
 }

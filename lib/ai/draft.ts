@@ -30,7 +30,7 @@ export function generateDraft(template: Template, hookText?: string): Draft {
 
   return {
     templateId: template.id,
-    bgmId: "bgm-lofi",
+    bgmId: template.bgmId,
     bgmVolume: 70,
     captions: [opener, body, closer],
     transitionIntensity: template.elements.transition ? "중간" : "낮음",
