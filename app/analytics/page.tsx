@@ -121,7 +121,7 @@ export default async function AnalyticsPage({
         <ul className="space-y-2">
           {suggestions.map((s, i) => (
             <li key={i} className="flex gap-2 rounded-lg bg-violet-50 px-3 py-2.5 text-sm text-violet-900">
-              <Badge>제안 {i + 1}</Badge>
+              <Badge>{`제안 ${i + 1}`}</Badge>
               <span>{s}</span>
             </li>
           ))}
