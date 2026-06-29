@@ -187,6 +187,26 @@ export async function updateCaptionsAction(projectId: string, captions: CaptionL
   revalidatePath(`/projects/${projectId}`);
 }
 
+// TimelineEditor의 음악 트랙 속성 패널에서 볼륨/구간을 조절할 때 사용한다.
+// updateDraftAction(FormData 기반)과 별개로, 구조화된 인자를 직접 받는 액션이다.
+export async function updateMusicWindowAction(
+  projectId: string,
+  patch: { bgmVolume: number; bgmStart: number; bgmEnd: number }
+) {
+  const project = await store.getProject(projectId);
+  if (!project?.draft) return;
+
+  const targetLength = project.targetLength;
+  const bgmVolume = Math.max(0, Math.min(100, patch.bgmVolume));
+  const bgmStart = Math.max(0, Math.min(patch.bgmStart, targetLength));
+  const bgmEnd = Math.max(bgmStart, Math.min(patch.bgmEnd, targetLength));
+
+  await store.updateProject(projectId, {
+    draft: { ...project.draft, bgmVolume, bgmStart, bgmEnd },
+  });
+  revalidatePath(`/projects/${projectId}`);
+}
+
 export async function regenerateHighlightCandidatesAction(projectId: string) {
   const project = await store.getProject(projectId);
   if (!project?.highlight) return;

@@ -16,6 +16,7 @@ import CaptionPanel from "@/components/CaptionPanel";
 import RenderPanel from "@/components/RenderPanel";
 import TemplateCard from "@/components/TemplateCard";
 import HighlightPanel from "@/components/HighlightPanel";
+import TimelineEditor from "@/components/TimelineEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -134,6 +135,25 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               targetLength={project.targetLength}
             />
           </div>
+        </Card>
+      )}
+
+      {/* 타임라인 기반 통합 편집 */}
+      {project.draft && selectedTemplate && (
+        <Card>
+          <SectionHeader
+            title="타임라인 기반 통합 편집"
+            description="클립 · 자막 · 음악을 하나의 타임라인에서 클릭으로 선택해 구간/텍스트/음량을 바로 편집하고, 구간 반복 미리보기로 결과를 확인할 수 있습니다."
+          />
+          <TimelineEditor
+            projectId={project.id}
+            sourceFiles={project.sourceFiles}
+            targetLength={project.targetLength}
+            draft={project.draft}
+            highlight={project.highlight}
+            templates={project.templates}
+            selectedTemplateId={project.selectedTemplateId}
+          />
         </Card>
       )}
 
