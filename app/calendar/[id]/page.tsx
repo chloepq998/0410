@@ -7,7 +7,7 @@ import { Button, Card } from "@/components/ui";
 
 export default async function CalendarItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const item = getCalendarItem(id);
+  const item = await getCalendarItem(id);
   if (!item) notFound();
 
   return (

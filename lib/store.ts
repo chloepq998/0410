@@ -1,3 +1,5 @@
+import { cache } from "react";
+import { get, put } from "@vercel/blob";
 import { nextId } from "@/lib/id";
 import { generateTemplates } from "@/lib/ai/templates";
 import { generateHookIdeas } from "@/lib/ai/hooks";
@@ -22,9 +24,17 @@ interface Database {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __aiShortformDb: Database | undefined;
 }
+
+// On Vercel, each request can land on a different (or freshly cold-started)
+// serverless instance, so a plain `globalThis` object isn't shared across
+// requests. When a Blob store is connected (BLOB_READ_WRITE_TOKEN is set),
+// persist the whole DB as a single JSON blob so state survives across
+// instances. Without a token (e.g. local `next dev`), fall back to the
+// previous in-memory-only behavior.
+const DB_PATHNAME = "ai-shortform-db.json";
+const USE_BLOB = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 function buildSeedProject(): Project {
   const goal = "판매" as const;
@@ -185,109 +195,166 @@ function createSeedDb(): Database {
   };
 }
 
-function getDb(): Database {
-  if (!globalThis.__aiShortformDb) {
-    globalThis.__aiShortformDb = createSeedDb();
+async function readBlobDb(): Promise<Database | undefined> {
+  const result = await get(DB_PATHNAME, { access: "private" });
+  if (!result) return undefined;
+  const text = await new Response(result.stream).text();
+  return JSON.parse(text) as Database;
+}
+
+async function writeBlobDb(db: Database): Promise<void> {
+  await put(DB_PATHNAME, JSON.stringify(db), {
+    access: "private",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+  });
+}
+
+// Memoized per request (React's cache scope), so multiple store calls within
+// the same render/action share one DB fetch instead of refetching repeatedly.
+const loadDb = cache(async (): Promise<Database> => {
+  if (!USE_BLOB) {
+    if (!globalThis.__aiShortformDb) {
+      globalThis.__aiShortformDb = createSeedDb();
+    }
+    return globalThis.__aiShortformDb;
   }
-  return globalThis.__aiShortformDb;
+
+  const existing = await readBlobDb();
+  if (existing) return existing;
+
+  const seeded = createSeedDb();
+  await writeBlobDb(seeded);
+  return seeded;
+});
+
+async function persist(db: Database): Promise<void> {
+  if (USE_BLOB) {
+    await writeBlobDb(db);
+  }
 }
 
 // Projects
-export function listProjects(): Project[] {
-  return [...getDb().projects].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+export async function listProjects(): Promise<Project[]> {
+  const db = await loadDb();
+  return [...db.projects].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 }
 
-export function getProject(id: string): Project | undefined {
-  return getDb().projects.find((p) => p.id === id);
+export async function getProject(id: string): Promise<Project | undefined> {
+  const db = await loadDb();
+  return db.projects.find((p) => p.id === id);
 }
 
-export function addProject(project: Project): void {
-  getDb().projects.unshift(project);
+export async function addProject(project: Project): Promise<void> {
+  const db = await loadDb();
+  db.projects.unshift(project);
+  await persist(db);
 }
 
-export function updateProject(id: string, patch: Partial<Project>): Project | undefined {
-  const db = getDb();
+export async function updateProject(id: string, patch: Partial<Project>): Promise<Project | undefined> {
+  const db = await loadDb();
   const idx = db.projects.findIndex((p) => p.id === id);
   if (idx === -1) return undefined;
   db.projects[idx] = { ...db.projects[idx], ...patch, updatedAt: new Date().toISOString() };
+  await persist(db);
   return db.projects[idx];
 }
 
 // References
-export function listReferences(): Reference[] {
-  return getDb().references;
+export async function listReferences(): Promise<Reference[]> {
+  const db = await loadDb();
+  return db.references;
 }
 
-export function addReference(ref: Reference): void {
-  getDb().references.unshift(ref);
+export async function addReference(ref: Reference): Promise<void> {
+  const db = await loadDb();
+  db.references.unshift(ref);
+  await persist(db);
 }
 
-export function updateReference(id: string, patch: Partial<Reference>): void {
-  const db = getDb();
+export async function updateReference(id: string, patch: Partial<Reference>): Promise<void> {
+  const db = await loadDb();
   const idx = db.references.findIndex((r) => r.id === id);
   if (idx !== -1) db.references[idx] = { ...db.references[idx], ...patch };
+  await persist(db);
 }
 
-export function deleteReference(id: string): void {
-  const db = getDb();
+export async function deleteReference(id: string): Promise<void> {
+  const db = await loadDb();
   db.references = db.references.filter((r) => r.id !== id);
+  await persist(db);
 }
 
-export function resetLearningData(): void {
-  const db = getDb();
+export async function resetLearningData(): Promise<void> {
+  const db = await loadDb();
   db.references = [];
   db.brandGuide = { toneKeywords: [], bannedExpressions: [], preferredColors: [], brandPhrases: [] };
   for (const project of db.projects) {
     project.feedback = [];
   }
+  await persist(db);
 }
 
 // Brand guide
-export function getBrandGuide(): BrandGuide {
-  return getDb().brandGuide;
+export async function getBrandGuide(): Promise<BrandGuide> {
+  const db = await loadDb();
+  return db.brandGuide;
 }
 
-export function updateBrandGuide(guide: BrandGuide): void {
-  getDb().brandGuide = guide;
+export async function updateBrandGuide(guide: BrandGuide): Promise<void> {
+  const db = await loadDb();
+  db.brandGuide = guide;
+  await persist(db);
 }
 
 // Calendar
-export function listCalendarItems(): CalendarItem[] {
-  return [...getDb().calendarItems].sort((a, b) => (a.scheduledDate < b.scheduledDate ? -1 : 1));
+export async function listCalendarItems(): Promise<CalendarItem[]> {
+  const db = await loadDb();
+  return [...db.calendarItems].sort((a, b) => (a.scheduledDate < b.scheduledDate ? -1 : 1));
 }
 
-export function getCalendarItem(id: string): CalendarItem | undefined {
-  return getDb().calendarItems.find((c) => c.id === id);
+export async function getCalendarItem(id: string): Promise<CalendarItem | undefined> {
+  const db = await loadDb();
+  return db.calendarItems.find((c) => c.id === id);
 }
 
-export function addCalendarItem(item: CalendarItem): void {
-  getDb().calendarItems.unshift(item);
+export async function addCalendarItem(item: CalendarItem): Promise<void> {
+  const db = await loadDb();
+  db.calendarItems.unshift(item);
+  await persist(db);
 }
 
-export function updateCalendarItem(id: string, patch: Partial<CalendarItem>): void {
-  const db = getDb();
+export async function updateCalendarItem(id: string, patch: Partial<CalendarItem>): Promise<void> {
+  const db = await loadDb();
   const idx = db.calendarItems.findIndex((c) => c.id === id);
   if (idx !== -1) db.calendarItems[idx] = { ...db.calendarItems[idx], ...patch };
+  await persist(db);
 }
 
-export function deleteCalendarItem(id: string): void {
-  const db = getDb();
+export async function deleteCalendarItem(id: string): Promise<void> {
+  const db = await loadDb();
   db.calendarItems = db.calendarItems.filter((c) => c.id !== id);
+  await persist(db);
 }
 
 // Metrics & platform connection
-export function listMetrics(): ContentMetric[] {
-  return getDb().metrics;
+export async function listMetrics(): Promise<ContentMetric[]> {
+  const db = await loadDb();
+  return db.metrics;
 }
 
-export function getPlatformConnection(): PlatformConnection {
-  return getDb().platformConnection;
+export async function getPlatformConnection(): Promise<PlatformConnection> {
+  const db = await loadDb();
+  return db.platformConnection;
 }
 
-export function setPlatformConnection(connected: boolean): void {
-  getDb().platformConnection = {
+export async function setPlatformConnection(connected: boolean): Promise<void> {
+  const db = await loadDb();
+  db.platformConnection = {
     platform: "틱톡",
     connected,
     connectedAt: connected ? new Date().toISOString() : undefined,
   };
+  await persist(db);
 }

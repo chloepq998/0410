@@ -8,9 +8,9 @@ import {
 } from "@/lib/actions/personalization";
 import { Button, Card, SectionHeader } from "@/components/ui";
 
-export default function PersonalizationPage() {
-  const references = listReferences();
-  const brandGuide = getBrandGuide();
+export default async function PersonalizationPage() {
+  const references = await listReferences();
+  const brandGuide = await getBrandGuide();
 
   return (
     <div className="space-y-6">

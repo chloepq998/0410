@@ -12,8 +12,8 @@ export default async function AnalyticsPage({
   searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
   const sp = await searchParams;
-  const connection = getPlatformConnection();
-  const allMetrics = listMetrics();
+  const connection = await getPlatformConnection();
+  const allMetrics = await listMetrics();
   const { from, to, label, range } = resolveRange(sp.range ?? null, sp.from, sp.to);
 
   const metrics = allMetrics.filter((m) => {

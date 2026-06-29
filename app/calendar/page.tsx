@@ -7,7 +7,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const { month: monthParam } = await searchParams;
   const { year, month } = parseMonthParam(monthParam);
   const grid = buildMonthGrid(year, month);
-  const items = listCalendarItems();
+  const items = await listCalendarItems();
 
   const itemsByDate = new Map<string, typeof items>();
   for (const item of items) {

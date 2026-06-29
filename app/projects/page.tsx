@@ -2,8 +2,8 @@ import Link from "next/link";
 import { listProjects } from "@/lib/store";
 import { Badge, Card } from "@/components/ui";
 
-export default function ProjectsPage() {
-  const projects = listProjects();
+export default async function ProjectsPage() {
+  const projects = await listProjects();
 
   return (
     <div className="space-y-6">

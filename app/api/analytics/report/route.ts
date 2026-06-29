@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const { from, to, label, range } = resolveRange(searchParams.get("range"), searchParams.get("from"), searchParams.get("to"));
 
-  const allMetrics = listMetrics();
+  const allMetrics = await listMetrics();
   const metrics = allMetrics.filter((m) => {
     const d = m.publishedAt.slice(0, 10);
     return d >= from.toISOString().slice(0, 10) && d <= to.toISOString().slice(0, 10);
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   }
   rows.push("");
   rows.push("다음 주 추천 주제");
-  const ideaCards = listCalendarItems().filter((c) => c.status === "아이디어");
+  const ideaCards = (await listCalendarItems()).filter((c) => c.status === "아이디어");
   for (const c of ideaCards) {
     rows.push(toCsvRow([c.topic]));
   }

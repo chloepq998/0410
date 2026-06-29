@@ -19,17 +19,17 @@ export async function addReferenceAction(formData: FormData) {
     excluded: false,
     createdAt: new Date().toISOString(),
   };
-  store.addReference(reference);
+  await store.addReference(reference);
   revalidatePath("/personalization");
 }
 
 export async function toggleReferenceExcludedAction(id: string, excluded: boolean) {
-  store.updateReference(id, { excluded });
+  await store.updateReference(id, { excluded });
   revalidatePath("/personalization");
 }
 
 export async function deleteReferenceAction(id: string) {
-  store.deleteReference(id);
+  await store.deleteReference(id);
   revalidatePath("/personalization");
 }
 
@@ -40,7 +40,7 @@ export async function updateBrandGuideAction(formData: FormData) {
       .map((s) => s.trim())
       .filter(Boolean);
 
-  store.updateBrandGuide({
+  await store.updateBrandGuide({
     toneKeywords: parseList("toneKeywords"),
     bannedExpressions: parseList("bannedExpressions"),
     preferredColors: parseList("preferredColors"),
@@ -52,6 +52,6 @@ export async function updateBrandGuideAction(formData: FormData) {
 export async function resetLearningDataAction(formData: FormData) {
   const confirmText = String(formData.get("confirmText") ?? "");
   if (confirmText !== "초기화") return;
-  store.resetLearningData();
+  await store.resetLearningData();
   revalidatePath("/personalization");
 }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import * as store from "@/lib/store";
 
 export async function togglePlatformConnectionAction() {
-  const current = store.getPlatformConnection();
-  store.setPlatformConnection(!current.connected);
+  const current = await store.getPlatformConnection();
+  await store.setPlatformConnection(!current.connected);
   revalidatePath("/analytics");
 }

@@ -44,33 +44,33 @@ export async function createProjectAction(formData: FormData) {
     updatedAt: now,
   };
 
-  store.addProject(project);
+  await store.addProject(project);
   revalidatePath("/projects");
   redirect(`/projects/${project.id}`);
 }
 
 export async function selectTemplateAction(projectId: string, templateId: string) {
-  const project = store.getProject(projectId);
+  const project = await store.getProject(projectId);
   if (!project) return;
   const template = project.templates.find((t) => t.id === templateId);
   if (!template) return;
 
   const hookText = project.hookIdeas.find((h) => h.id === project.selectedHookId)?.text;
   const draft = generateDraft(template, hookText);
-  store.updateProject(projectId, { selectedTemplateId: templateId, draft, status: "수정중" });
+  await store.updateProject(projectId, { selectedTemplateId: templateId, draft, status: "수정중" });
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function regenerateTemplatesAction(projectId: string) {
-  const project = store.getProject(projectId);
+  const project = await store.getProject(projectId);
   if (!project) return;
   const templates = generateTemplates({ goal: project.goal, tone: project.tone, targetLength: project.targetLength });
-  store.updateProject(projectId, { templates, selectedTemplateId: undefined, draft: undefined });
+  await store.updateProject(projectId, { templates, selectedTemplateId: undefined, draft: undefined });
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function updateDraftAction(projectId: string, formData: FormData) {
-  const project = store.getProject(projectId);
+  const project = await store.getProject(projectId);
   if (!project?.draft) return;
 
   const bgmId = String(formData.get("bgmId") ?? project.draft.bgmId);
@@ -92,22 +92,22 @@ export async function updateDraftAction(projectId: string, formData: FormData) {
     };
   });
 
-  store.updateProject(projectId, {
+  await store.updateProject(projectId, {
     draft: { ...project.draft, bgmId, bgmVolume, transitionIntensity, captions },
   });
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function generateHookIdeasAction(projectId: string) {
-  const project = store.getProject(projectId);
+  const project = await store.getProject(projectId);
   if (!project) return;
   const hookIdeas = generateHookIdeas({ goal: project.goal, tone: project.tone, targetLength: project.targetLength });
-  store.updateProject(projectId, { hookIdeas });
+  await store.updateProject(projectId, { hookIdeas });
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function applyHookAction(projectId: string, hookId: string) {
-  const project = store.getProject(projectId);
+  const project = await store.getProject(projectId);
   if (!project) return;
   const hook = project.hookIdeas.find((h) => h.id === hookId);
   if (!hook) return;
@@ -117,26 +117,26 @@ export async function applyHookAction(projectId: string, hookId: string) {
     const captions = draft.captions.map((c, i) => (i === 0 ? { ...c, text: hook.text } : c));
     draft = { ...draft, captions };
   }
-  store.updateProject(projectId, { selectedHookId: hookId, draft });
+  await store.updateProject(projectId, { selectedHookId: hookId, draft });
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function generateMarketingAction(projectId: string) {
-  const project = store.getProject(projectId);
+  const project = await store.getProject(projectId);
   if (!project) return;
   const marketing = generateMarketingSuggestions({ goal: project.goal, productName: project.name });
-  store.updateProject(projectId, { marketing });
+  await store.updateProject(projectId, { marketing });
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function markProjectCompletedAction(projectId: string) {
-  store.updateProject(projectId, { status: "완료" });
+  await store.updateProject(projectId, { status: "완료" });
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/projects");
 }
 
 export async function submitFeedbackAction(projectId: string, formData: FormData) {
-  const project = store.getProject(projectId);
+  const project = await store.getProject(projectId);
   if (!project) return;
 
   const sentiment = String(formData.get("sentiment") ?? "좋아요") as "좋아요" | "별로예요";
@@ -173,7 +173,7 @@ export async function submitFeedbackAction(projectId: string, formData: FormData
     createdAt: new Date().toISOString(),
   };
 
-  store.updateProject(projectId, {
+  await store.updateProject(projectId, {
     feedback: [feedback, ...project.feedback],
     hookIdeas,
     draft,

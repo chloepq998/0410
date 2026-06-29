@@ -25,7 +25,7 @@ export async function createCalendarItemAction(formData: FormData) {
     platform: String(formData.get("platform") ?? "틱톡") as CalendarItem["platform"],
     createdAt: new Date().toISOString(),
   };
-  store.addCalendarItem(item);
+  await store.addCalendarItem(item);
   revalidatePath("/calendar");
   redirect("/calendar");
 }
@@ -44,16 +44,16 @@ export async function updateCalendarItemAction(id: string, formData: FormData) {
     scheduledDate: String(formData.get("scheduledDate") ?? ""),
     platform: String(formData.get("platform") ?? "틱톡") as CalendarItem["platform"],
   };
-  store.updateCalendarItem(id, patch);
+  await store.updateCalendarItem(id, patch);
   revalidatePath("/calendar");
 }
 
 export async function deleteCalendarItemAction(id: string) {
-  store.deleteCalendarItem(id);
+  await store.deleteCalendarItem(id);
   revalidatePath("/calendar");
 }
 
 export async function updateCalendarStatusAction(id: string, status: CalendarItem["status"]) {
-  store.updateCalendarItem(id, { status });
+  await store.updateCalendarItem(id, { status });
   revalidatePath("/calendar");
 }

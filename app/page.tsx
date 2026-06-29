@@ -9,10 +9,10 @@ const TARGET_METRICS = [
   { label: "생성 콘텐츠 평균 조회수", current: "+14%", target: "+25%" },
 ];
 
-export default function DashboardPage() {
-  const projects = listProjects();
-  const metrics = listMetrics();
-  const calendarItems = listCalendarItems();
+export default async function DashboardPage() {
+  const projects = await listProjects();
+  const metrics = await listMetrics();
+  const calendarItems = await listCalendarItems();
   const totalViews = metrics.reduce((s, m) => s + m.views, 0);
 
   return (
