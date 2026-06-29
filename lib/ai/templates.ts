@@ -15,7 +15,7 @@ export function generateTemplates(input: {
   targetLength: LengthSec;
 }): Template[] {
   const moods = MOOD_BY_GOAL[input.goal];
-  const lengths: LengthSec[] = [5, 10, 15];
+  const lengths: LengthSec[] = [15, 30, 60];
 
   return moods.map((mood, i) => {
     const lengthSec = i === 0 ? input.targetLength : lengths[(lengths.indexOf(input.targetLength) + i) % lengths.length];

@@ -39,7 +39,7 @@ const USE_BLOB = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 function buildSeedProject(): Project {
   const goal = "판매" as const;
   const tone = "발랄" as const;
-  const targetLength = 10 as const;
+  const targetLength = 30 as const;
   const templates = generateTemplates({ goal, tone, targetLength });
   const selectedTemplate = templates[0];
   const hookIdeas = generateHookIdeas({ goal, tone, targetLength });

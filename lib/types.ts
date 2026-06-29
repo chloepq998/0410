@@ -1,6 +1,6 @@
 export type Goal = "인지도" | "판매" | "팔로우";
 export type Tone = "발랄" | "진지" | "유머";
-export type LengthSec = 5 | 10 | 15;
+export type LengthSec = 15 | 30 | 60;
 export type ProjectStatus = "초안" | "수정중" | "완료";
 export type Mood = "감성" | "정보" | "유머";
 

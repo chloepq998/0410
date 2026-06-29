@@ -1,4 +1,4 @@
-import type { CaptionLine, Draft, Project, RenderStatus } from "@/lib/types";
+import type { CaptionLine, Draft, Project, Render, RenderStatus } from "@/lib/types";
 
 const SHOTSTACK_HOST =
   process.env.SHOTSTACK_ENV === "production" ? "https://api.shotstack.io/v1" : "https://api.shotstack.io/stage";
@@ -105,6 +105,19 @@ function requireApiKey(): string {
   const apiKey = process.env.SHOTSTACK_API_KEY;
   if (!apiKey) throw new Error("SHOTSTACK_API_KEY 환경 변수가 설정되지 않았습니다.");
   return apiKey;
+}
+
+// Builds the timeline from the project's draft and submits it to Shotstack,
+// returning a `Render` patch on success or failure. Shared by the manual
+// "다시 렌더링" action and the automated edit-and-render flow.
+export async function renderProject(project: Project): Promise<Render> {
+  try {
+    const edit = buildTimeline(project);
+    const renderId = await submitRender(edit);
+    return { id: renderId, status: "대기중", updatedAt: new Date().toISOString() };
+  } catch (error) {
+    return { status: "실패", error: (error as Error).message, updatedAt: new Date().toISOString() };
+  }
 }
 
 export async function submitRender(edit: ShotstackEdit): Promise<string> {

@@ -2,20 +2,26 @@
 
 import { useState } from "react";
 import { upload } from "@vercel/blob/client";
-import { createProjectAction } from "@/lib/actions/projects";
+import { autoEditAction } from "@/lib/actions/projects";
 import { Button, Card } from "@/components/ui";
 
 export default function NewProjectForm() {
   const [files, setFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [stage, setStage] = useState<"idle" | "uploading" | "editing">("idle");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    if (files.length === 0) {
+      setError("원본 영상 또는 사진을 1개 이상 업로드해주세요.");
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
 
-    setUploading(true);
+    setStage("uploading");
     try {
       const sourceFiles = await Promise.all(
         files.map(async (file) => {
@@ -31,12 +37,15 @@ export default function NewProjectForm() {
         })
       );
       formData.set("sourceFiles", JSON.stringify(sourceFiles));
-      await createProjectAction(formData);
+      setStage("editing");
+      await autoEditAction(formData);
     } catch {
-      setError("파일 업로드에 실패했습니다. 다시 시도해주세요.");
-      setUploading(false);
+      setError("자동 편집 처리에 실패했습니다. 다시 시도해주세요.");
+      setStage("idle");
     }
   }
+
+  const submitting = stage !== "idle";
 
   return (
     <Card>
@@ -70,7 +79,7 @@ export default function NewProjectForm() {
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
             className="mt-1 block w-full text-sm text-neutral-600"
           />
-          <p className="mt-1 text-xs text-neutral-400">권장 비율 9:16, 권장 길이 5~15초. 업로드한 영상은 실제 자동 편집에 사용됩니다.</p>
+          <p className="mt-1 text-xs text-neutral-400">권장 비율 9:16. 업로드한 영상/사진은 실제 자동 편집(하이라이트·자막·BGM 합성)에 사용됩니다.</p>
           {files.length > 0 && (
             <ul className="mt-2 list-inside list-disc text-xs text-neutral-500">
               {files.map((f) => (
@@ -99,18 +108,29 @@ export default function NewProjectForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700">목표 길이</label>
-            <select name="targetLength" defaultValue="10" className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
-              <option value="5">5초</option>
-              <option value="10">10초</option>
+            <select name="targetLength" defaultValue="15" className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
               <option value="15">15초</option>
+              <option value="30">30초</option>
+              <option value="60">60초</option>
             </select>
           </div>
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-neutral-700">템플릿</label>
+          <select name="templateMode" defaultValue="auto" className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
+            <option value="auto">자동 추천 (AI가 가장 적합한 템플릿 적용)</option>
+            <option value="none">템플릿 없음 (기본 스타일)</option>
+          </select>
+          <p className="mt-1 text-xs text-neutral-400">생성 후에도 추천 템플릿 중 다른 것으로 바로 바꿀 수 있습니다.</p>
+        </div>
+
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <Button type="submit" disabled={uploading}>
-          {uploading ? "소스 업로드 중..." : "프로젝트 생성하고 템플릿 추천받기"}
+        <Button type="submit" disabled={submitting}>
+          {stage === "uploading" && "소스 업로드 중..."}
+          {stage === "editing" && "자동 편집 처리 중..."}
+          {stage === "idle" && "자동 편집 시작"}
         </Button>
       </form>
     </Card>

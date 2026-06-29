@@ -21,7 +21,7 @@ export function generateDraft(template: Template, hookText?: string): Draft {
     style: opener.style,
   };
 
-  const cutCount = template.lengthSec <= 5 ? 3 : template.lengthSec <= 10 ? 5 : 7;
+  const cutCount = template.lengthSec <= 15 ? 3 : template.lengthSec <= 30 ? 5 : 7;
   const cutPlan = Array.from({ length: cutCount }, (_, i) => {
     if (i === 0) return "컷 1: 훅 오프닝 (클로즈업)";
     if (i === cutCount - 1) return `컷 ${i + 1}: 마무리 + CTA 자막`;

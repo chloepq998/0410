@@ -2,23 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import * as store from "@/lib/store";
-import { buildTimeline, getRenderStatus, submitRender } from "@/lib/video/shotstack";
+import { getRenderStatus, renderProject } from "@/lib/video/shotstack";
 
 export async function startRenderAction(projectId: string) {
   const project = await store.getProject(projectId);
   if (!project) return;
 
-  try {
-    const edit = buildTimeline(project);
-    const renderId = await submitRender(edit);
-    await store.updateProject(projectId, {
-      render: { id: renderId, status: "대기중", updatedAt: new Date().toISOString() },
-    });
-  } catch (error) {
-    await store.updateProject(projectId, {
-      render: { status: "실패", error: (error as Error).message, updatedAt: new Date().toISOString() },
-    });
-  }
+  const render = await renderProject(project);
+  await store.updateProject(projectId, { render });
   revalidatePath(`/projects/${projectId}`);
 }
 

@@ -8,19 +8,35 @@ import { generateTemplates } from "@/lib/ai/templates";
 import { generateHookIdeas } from "@/lib/ai/hooks";
 import { generateMarketingSuggestions } from "@/lib/ai/marketing";
 import { generateDraft } from "@/lib/ai/draft";
-import type { CaptionLine, Goal, LengthSec, Project, SourceFile, Tone } from "@/lib/types";
+import { renderProject } from "@/lib/video/shotstack";
+import type { CaptionLine, Goal, LengthSec, Project, SourceFile, Template, Tone } from "@/lib/types";
 
-export async function createProjectAction(formData: FormData) {
+const NO_TEMPLATE_STYLE: Omit<Template, "id" | "lengthSec"> = {
+  name: "템플릿 없음 (기본 스타일)",
+  mood: "정보",
+  hookType: "기본",
+  elements: { bgm: true, subtitle: true, transition: false },
+  previewSummary: "템플릿을 적용하지 않은 기본 자막/BGM 스타일입니다.",
+};
+
+// Runs the full auto-edit pipeline in one step: source 선택 → 템플릿(또는 '없음') →
+// 초안 생성 → (실제 소스가 있으면) Shotstack 렌더링 시작 → 프로젝트 저장 후 편집 화면으로 이동.
+export async function autoEditAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const goal = String(formData.get("goal") ?? "판매") as Goal;
   const tone = String(formData.get("tone") ?? "발랄") as Tone;
-  const targetLength = Number(formData.get("targetLength") ?? 10) as LengthSec;
+  const targetLength = Number(formData.get("targetLength") ?? 15) as LengthSec;
+  const templateMode = String(formData.get("templateMode") ?? "auto") as "auto" | "none";
   const sourceFiles = JSON.parse(String(formData.get("sourceFiles") ?? "[]")) as SourceFile[];
 
-  if (!name) return;
+  if (!name || sourceFiles.length === 0) return;
 
-  const templates = generateTemplates({ goal, tone, targetLength });
+  const recommendedTemplates = generateTemplates({ goal, tone, targetLength });
+  const noneTemplate: Template = { id: nextId("tpl"), lengthSec: targetLength, ...NO_TEMPLATE_STYLE };
+  const templates = templateMode === "none" ? [...recommendedTemplates, noneTemplate] : recommendedTemplates;
+  const selectedTemplate = templateMode === "none" ? noneTemplate : recommendedTemplates[0];
+
   const now = new Date().toISOString();
   const project: Project = {
     id: nextId("proj"),
@@ -30,13 +46,19 @@ export async function createProjectAction(formData: FormData) {
     tone,
     targetLength,
     sourceFiles,
-    status: "초안",
+    status: "수정중",
     templates,
+    selectedTemplateId: selectedTemplate.id,
+    draft: generateDraft(selectedTemplate),
     hookIdeas: [],
     feedback: [],
     createdAt: now,
     updatedAt: now,
   };
+
+  if (sourceFiles.some((f) => f.url)) {
+    project.render = await renderProject(project);
+  }
 
   await store.addProject(project);
   revalidatePath("/projects");
