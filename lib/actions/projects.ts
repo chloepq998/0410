@@ -72,6 +72,7 @@ export async function autoEditAction(formData: FormData) {
     feedback: [],
     highlightCandidates,
     highlight,
+    versions: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -103,6 +104,7 @@ export async function selectTemplateAction(projectId: string, templateId: string
   const hookText = project.hookIdeas.find((h) => h.id === project.selectedHookId)?.text;
   const draft = generateDraft(template, hookText);
   const templateUndo = { selectedTemplateId: project.selectedTemplateId, draft: project.draft };
+  const versions = store.pushVersion(project, `템플릿 변경: ${template.name}`);
 
   await store.updateProject(projectId, {
     templates,
@@ -110,6 +112,7 @@ export async function selectTemplateAction(projectId: string, templateId: string
     draft,
     status: "수정중",
     templateUndo,
+    versions,
   });
   revalidatePath(`/projects/${projectId}`);
 }
@@ -161,6 +164,7 @@ export async function updateDraftAction(projectId: string, formData: FormData) {
   const sfxId = sfxIdRaw || undefined;
   const sfxUrlRaw = formData.get("sfxUrl");
   const sfxUrl = sfxUrlRaw !== null ? String(sfxUrlRaw) || undefined : project.draft.sfxUrl;
+  const versions = store.pushVersion(project, "간편 편집: BGM/효과 조정");
 
   await store.updateProject(projectId, {
     draft: {
@@ -175,6 +179,7 @@ export async function updateDraftAction(projectId: string, formData: FormData) {
       sfxId,
       sfxUrl,
     },
+    versions,
   });
   revalidatePath(`/projects/${projectId}`);
 }
@@ -183,7 +188,8 @@ export async function updateDraftAction(projectId: string, formData: FormData) {
 export async function updateCaptionsAction(projectId: string, captions: CaptionLine[]) {
   const project = await store.getProject(projectId);
   if (!project?.draft) return;
-  await store.updateProject(projectId, { draft: { ...project.draft, captions } });
+  const versions = store.pushVersion(project, "자막 편집");
+  await store.updateProject(projectId, { draft: { ...project.draft, captions }, versions });
   revalidatePath(`/projects/${projectId}`);
 }
 
@@ -200,9 +206,11 @@ export async function updateMusicWindowAction(
   const bgmVolume = Math.max(0, Math.min(100, patch.bgmVolume));
   const bgmStart = Math.max(0, Math.min(patch.bgmStart, targetLength));
   const bgmEnd = Math.max(bgmStart, Math.min(patch.bgmEnd, targetLength));
+  const versions = store.pushVersion(project, "타임라인: 음악 구간/볼륨 조정");
 
   await store.updateProject(projectId, {
     draft: { ...project.draft, bgmVolume, bgmStart, bgmEnd },
+    versions,
   });
   revalidatePath(`/projects/${projectId}`);
 }
@@ -227,6 +235,7 @@ export async function selectHighlightCandidateAction(projectId: string, candidat
   if (!project?.highlight || !project.highlightCandidates) return;
   const candidate = project.highlightCandidates.find((c) => c.id === candidateId);
   if (!candidate) return;
+  const versions = store.pushVersion(project, "하이라이트 후보 선택");
 
   await store.updateProject(projectId, {
     highlight: {
@@ -235,6 +244,7 @@ export async function selectHighlightCandidateAction(projectId: string, candidat
       start: candidate.start,
       end: candidate.end,
     },
+    versions,
   });
   revalidatePath(`/projects/${projectId}`);
 }
@@ -249,9 +259,11 @@ export async function adjustHighlightAction(projectId: string, start: number, en
 
   const clampedStart = Math.max(0, Math.min(start, duration));
   const clampedEnd = Math.max(clampedStart, Math.min(end, duration));
+  const versions = store.pushVersion(project, "하이라이트 구간 직접 조정");
 
   await store.updateProject(projectId, {
     highlight: { sourceIndex: project.highlight.sourceIndex, start: clampedStart, end: clampedEnd },
+    versions,
   });
   revalidatePath(`/projects/${projectId}`);
 }
@@ -289,6 +301,38 @@ export async function generateMarketingAction(projectId: string) {
 
 export async function markProjectCompletedAction(projectId: string) {
   await store.updateProject(projectId, { status: "완료" });
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/projects");
+}
+
+export async function renameProjectAction(projectId: string, formData: FormData) {
+  const project = await store.getProject(projectId);
+  if (!project) return;
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name || name === project.name) return;
+
+  const versions = store.pushVersion(project, `이름 변경 전: ${project.name}`);
+  await store.updateProject(projectId, { name, versions });
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/projects");
+}
+
+// 버전 이력의 특정 시점으로 되돌린다. 되돌리기 전 상태도 한 번 더 스냅샷으로 남겨
+// 되돌리기 자체를 취소(다시 되돌리기)할 수 있게 한다.
+export async function restoreVersionAction(projectId: string, versionId: string) {
+  const project = await store.getProject(projectId);
+  if (!project) return;
+  const version = project.versions.find((v) => v.id === versionId);
+  if (!version) return;
+
+  const versions = store.pushVersion(project, "되돌리기 전 상태");
+  await store.updateProject(projectId, {
+    name: version.snapshot.name,
+    selectedTemplateId: version.snapshot.selectedTemplateId,
+    draft: version.snapshot.draft,
+    highlight: version.snapshot.highlight,
+    versions,
+  });
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/projects");
 }

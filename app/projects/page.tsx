@@ -4,6 +4,10 @@ import { Badge, Card } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
 export default async function ProjectsPage() {
   const projects = await listProjects();
 
@@ -23,23 +27,35 @@ export default async function ProjectsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {projects.map((p) => (
-          <Link key={p.id} href={`/projects/${p.id}`}>
-            <Card className="h-full transition hover:border-violet-300 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <Badge>{p.status}</Badge>
-                <span className="text-xs text-neutral-400">{p.targetLength}초 · {p.goal}</span>
-              </div>
-              <p className="mt-3 font-semibold text-neutral-900">{p.name}</p>
-              <p className="mt-1 line-clamp-2 text-sm text-neutral-500">{p.description}</p>
-              <div className="mt-3 flex items-center gap-2 text-xs text-neutral-400">
-                <span>{p.sourceFiles.length}개 소스</span>
-                <span>·</span>
-                <span>{p.templates.length}개 템플릿 추천</span>
-              </div>
-            </Card>
-          </Link>
-        ))}
+        {projects.map((p) => {
+          const thumbnail = p.sourceFiles.find((f) => f.kind === "photo" && f.url);
+          return (
+            <Link key={p.id} href={`/projects/${p.id}`}>
+              <Card className="h-full transition hover:border-violet-300 hover:shadow-md">
+                {thumbnail ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={thumbnail.url} alt={p.name} className="mb-3 h-32 w-full rounded-lg object-cover" />
+                ) : (
+                  <div className="mb-3 flex h-32 w-full items-center justify-center rounded-lg bg-neutral-100 text-xs text-neutral-400">
+                    썸네일 없음
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <Badge>{p.status}</Badge>
+                  <span className="text-xs text-neutral-400">{p.targetLength}초 · {p.goal}</span>
+                </div>
+                <p className="mt-3 font-semibold text-neutral-900">{p.name}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-neutral-500">{p.description}</p>
+                <div className="mt-3 flex items-center gap-2 text-xs text-neutral-400">
+                  <span>{p.sourceFiles.length}개 소스</span>
+                  <span>·</span>
+                  <span>{p.templates.length}개 템플릿 추천</span>
+                </div>
+                <p className="mt-1.5 text-xs text-neutral-400">마지막 수정: {formatDate(p.updatedAt)}</p>
+              </Card>
+            </Link>
+          );
+        })}
         {projects.length === 0 && (
           <Card className="sm:col-span-2 lg:col-span-3 text-center text-neutral-400">아직 생성된 프로젝트가 없습니다.</Card>
         )}

@@ -17,6 +17,8 @@ import RenderPanel from "@/components/RenderPanel";
 import TemplateCard from "@/components/TemplateCard";
 import HighlightPanel from "@/components/HighlightPanel";
 import TimelineEditor from "@/components/TimelineEditor";
+import ProjectNameEditor from "@/components/ProjectNameEditor";
+import VersionHistoryPanel from "@/components/VersionHistoryPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               {project.goal} · {project.tone} · {project.targetLength}초
             </span>
           </div>
-          <h1 className="mt-1 text-2xl font-bold text-neutral-900">{project.name}</h1>
+          <div className="mt-1">
+            <ProjectNameEditor projectId={project.id} name={project.name} updatedAt={project.updatedAt} />
+          </div>
           <p className="mt-1 text-sm text-neutral-500">{project.description}</p>
           <p className="mt-1 text-xs text-neutral-400">소스: {project.sourceFiles.map((f) => f.name).join(", ") || "없음"}</p>
         </div>
@@ -48,6 +52,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </form>
         )}
       </div>
+
+      {/* 저장 이력 (버전 관리) */}
+      <Card>
+        <SectionHeader
+          title="저장 이력 (버전 관리)"
+          description="편집 중 자동으로 저장 이력이 쌓입니다. 최근 5개까지 확인하고 원하는 시점으로 되돌릴 수 있습니다."
+        />
+        <VersionHistoryPanel projectId={project.id} versions={project.versions} />
+      </Card>
 
       {/* 0. 하이라이트 추출 */}
       {project.highlightCandidates && project.highlight && (

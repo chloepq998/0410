@@ -124,6 +124,20 @@ export interface FeedbackEntry {
   createdAt: string;
 }
 
+export interface ProjectVersionSnapshot {
+  name: string;
+  selectedTemplateId?: string;
+  draft?: Draft;
+  highlight?: HighlightSelection;
+}
+
+export interface ProjectVersion {
+  id: string;
+  label: string;
+  snapshot: ProjectVersionSnapshot;
+  createdAt: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -144,6 +158,7 @@ export interface Project {
   templateUndo?: { selectedTemplateId?: string; draft?: Draft };
   highlightCandidates?: HighlightCandidate[];
   highlight?: HighlightSelection;
+  versions: ProjectVersion[];
   createdAt: string;
   updatedAt: string;
 }

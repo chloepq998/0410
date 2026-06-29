@@ -79,6 +79,7 @@ function buildSeedProject(): Project {
       start: firstCandidate.start,
       end: firstCandidate.end,
     },
+    versions: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -275,6 +276,23 @@ export async function updateProject(id: string, patch: Partial<Project>): Promis
   db.projects[idx] = { ...db.projects[idx], ...patch, updatedAt: new Date().toISOString() };
   await persist(db);
   return db.projects[idx];
+}
+
+// 변경을 적용하기 직전의 프로젝트 상태를 버전 이력에 스냅샷으로 남긴다.
+// 최근 5개까지만 보관해 무한정 쌓이지 않게 한다(요구사항: 최소 3개 확인 가능).
+export function pushVersion(project: Project, label: string): Project["versions"] {
+  const version: Project["versions"][number] = {
+    id: nextId("ver"),
+    label,
+    snapshot: {
+      name: project.name,
+      selectedTemplateId: project.selectedTemplateId,
+      draft: project.draft,
+      highlight: project.highlight,
+    },
+    createdAt: new Date().toISOString(),
+  };
+  return [version, ...project.versions].slice(0, 5);
 }
 
 // References
