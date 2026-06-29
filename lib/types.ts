@@ -9,6 +9,21 @@ export interface SourceFile {
   name: string;
   kind: "photo" | "video";
   url?: string;
+  durationSec?: number;
+}
+
+export interface HighlightCandidate {
+  id: string;
+  start: number;
+  end: number;
+  reason: string;
+}
+
+export interface HighlightSelection {
+  sourceIndex: number;
+  candidateId?: string;
+  start: number;
+  end: number;
 }
 
 export interface SourceMedia {
@@ -112,6 +127,8 @@ export interface Project {
   feedback: FeedbackEntry[];
   render?: Render;
   templateUndo?: { selectedTemplateId?: string; draft?: Draft };
+  highlightCandidates?: HighlightCandidate[];
+  highlight?: HighlightSelection;
   createdAt: string;
   updatedAt: string;
 }

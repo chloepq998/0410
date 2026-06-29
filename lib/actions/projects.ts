@@ -8,8 +8,9 @@ import { generateTemplates, TEMPLATE_LIBRARY } from "@/lib/ai/templates";
 import { generateHookIdeas } from "@/lib/ai/hooks";
 import { generateMarketingSuggestions } from "@/lib/ai/marketing";
 import { generateDraft } from "@/lib/ai/draft";
+import { generateHighlightCandidates } from "@/lib/ai/highlights";
 import { renderProject } from "@/lib/video/shotstack";
-import type { CaptionLine, Goal, LengthSec, Project, SourceFile, Template, Tone } from "@/lib/types";
+import type { CaptionLine, Goal, HighlightSelection, LengthSec, Project, SourceFile, Template, Tone } from "@/lib/types";
 
 const NO_TEMPLATE_STYLE: Omit<Template, "id" | "lengthSec"> = {
   name: "템플릿 없음 (기본 스타일)",
@@ -41,6 +42,19 @@ export async function autoEditAction(formData: FormData) {
   const templates = templateMode === "none" ? [...recommendedTemplates, noneTemplate] : recommendedTemplates;
   const selectedTemplate = templateMode === "none" ? noneTemplate : recommendedTemplates[0];
 
+  // 목표 길이보다 긴 영상 소스가 있으면, 해당 영상을 분석해 하이라이트 후보를 자동 생성한다.
+  const highlightSourceIndex = sourceFiles.findIndex(
+    (f) => f.kind === "video" && f.durationSec && f.durationSec > targetLength
+  );
+  let highlightCandidates: Project["highlightCandidates"];
+  let highlight: HighlightSelection | undefined;
+  if (highlightSourceIndex !== -1) {
+    const source = sourceFiles[highlightSourceIndex];
+    highlightCandidates = generateHighlightCandidates(source.durationSec!, targetLength);
+    const first = highlightCandidates[0];
+    highlight = { sourceIndex: highlightSourceIndex, candidateId: first.id, start: first.start, end: first.end };
+  }
+
   const now = new Date().toISOString();
   const project: Project = {
     id: nextId("proj"),
@@ -56,6 +70,8 @@ export async function autoEditAction(formData: FormData) {
     draft: generateDraft(selectedTemplate),
     hookIdeas: [],
     feedback: [],
+    highlightCandidates,
+    highlight,
     createdAt: now,
     updatedAt: now,
   };
@@ -149,6 +165,55 @@ export async function updateDraftAction(projectId: string, formData: FormData) {
 
   await store.updateProject(projectId, {
     draft: { ...project.draft, bgmId, bgmUrl, bgmVolume, transitionIntensity, captions },
+  });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function regenerateHighlightCandidatesAction(projectId: string) {
+  const project = await store.getProject(projectId);
+  if (!project?.highlight) return;
+  const source = project.sourceFiles[project.highlight.sourceIndex];
+  if (!source?.durationSec) return;
+
+  const highlightCandidates = generateHighlightCandidates(source.durationSec, project.targetLength);
+  const first = highlightCandidates[0];
+  await store.updateProject(projectId, {
+    highlightCandidates,
+    highlight: { sourceIndex: project.highlight.sourceIndex, candidateId: first.id, start: first.start, end: first.end },
+  });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function selectHighlightCandidateAction(projectId: string, candidateId: string) {
+  const project = await store.getProject(projectId);
+  if (!project?.highlight || !project.highlightCandidates) return;
+  const candidate = project.highlightCandidates.find((c) => c.id === candidateId);
+  if (!candidate) return;
+
+  await store.updateProject(projectId, {
+    highlight: {
+      sourceIndex: project.highlight.sourceIndex,
+      candidateId: candidate.id,
+      start: candidate.start,
+      end: candidate.end,
+    },
+  });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+// 드래그 핸들/숫자 입력으로 직접 조절한 구간은 후보 선택 상태(candidateId)를 해제해
+// "커스텀 구간"으로 저장한다.
+export async function adjustHighlightAction(projectId: string, start: number, end: number) {
+  const project = await store.getProject(projectId);
+  if (!project?.highlight) return;
+  const source = project.sourceFiles[project.highlight.sourceIndex];
+  const duration = source?.durationSec ?? Math.max(start, end);
+
+  const clampedStart = Math.max(0, Math.min(start, duration));
+  const clampedEnd = Math.max(clampedStart, Math.min(end, duration));
+
+  await store.updateProject(projectId, {
+    highlight: { sourceIndex: project.highlight.sourceIndex, start: clampedStart, end: clampedEnd },
   });
   revalidatePath(`/projects/${projectId}`);
 }

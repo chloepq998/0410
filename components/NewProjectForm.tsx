@@ -51,7 +51,7 @@ export default function NewProjectForm() {
           const kind = classifySourceKind(file);
           const durationSec = await getVideoDuration(file);
           await addSourceAction({ name: file.name, kind, url: blob.url, sizeBytes: file.size, durationSec });
-          return { name: file.name, kind, url: blob.url };
+          return { name: file.name, kind, url: blob.url, durationSec };
         })
       );
       formData.set("sourceFiles", JSON.stringify(sourceFiles));

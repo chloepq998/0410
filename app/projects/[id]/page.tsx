@@ -14,6 +14,7 @@ import FeedbackForm from "@/components/FeedbackForm";
 import DraftEditForm from "@/components/DraftEditForm";
 import RenderPanel from "@/components/RenderPanel";
 import TemplateCard from "@/components/TemplateCard";
+import HighlightPanel from "@/components/HighlightPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,23 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </form>
         )}
       </div>
+
+      {/* 0. 하이라이트 추출 */}
+      {project.highlightCandidates && project.highlight && (
+        <Card>
+          <SectionHeader
+            title="AI 하이라이트 추출 & 구간 조절"
+            description="업로드한 원본 영상을 분석해 핵심 구간 후보 3개를 추천합니다. 후보를 선택하거나 드래그 핸들/숫자 입력으로 직접 구간을 조절할 수 있습니다."
+          />
+          <HighlightPanel
+            projectId={project.id}
+            durationSec={project.sourceFiles[project.highlight.sourceIndex]?.durationSec ?? project.highlight.end}
+            targetLength={project.targetLength}
+            candidates={project.highlightCandidates}
+            highlight={project.highlight}
+          />
+        </Card>
+      )}
 
       {/* 1. 템플릿 추천 */}
       <Card>

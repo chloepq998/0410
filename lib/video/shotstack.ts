@@ -50,7 +50,9 @@ const RESOLUTION_MAP: Record<RenderResolution, string> = {
 
 // Maps our `Draft` (cut plan, captions, BGM) onto a Shotstack timeline. Source
 // files and captions carry no explicit timing, so clips/captions are spread
-// evenly across the project's target length.
+// evenly across the project's target length. If a highlight selection exists
+// for one of the sources, that clip's playback is trimmed to the selected
+// window via Shotstack's `asset.trim` + a capped `length`.
 export function buildTimeline(
   project: Project,
   resolution: RenderResolution = "1080p",
@@ -65,17 +67,29 @@ export function buildTimeline(
   const totalLength = project.targetLength;
   const clipLength = totalLength / sources.length;
   const transition = transitionFor(draft.transitionIntensity);
+  const highlightSource = project.highlight ? project.sourceFiles[project.highlight.sourceIndex] : undefined;
 
-  const videoClips: ShotstackClip[] = sources.map((file, i) => ({
-    asset: {
+  const videoClips: ShotstackClip[] = sources.map((file, i) => {
+    const asset: Record<string, unknown> = {
       type: file.kind === "video" ? "video" : "image",
       src: file.url,
-    },
-    start: i * clipLength,
-    length: clipLength,
-    fit: "cover",
-    ...(transition ? { transition } : {}),
-  }));
+    };
+
+    let length = clipLength;
+    if (project.highlight && highlightSource && file === highlightSource) {
+      const trimLength = Math.max(0.1, project.highlight.end - project.highlight.start);
+      asset.trim = project.highlight.start;
+      length = Math.min(clipLength, trimLength);
+    }
+
+    return {
+      asset,
+      start: i * clipLength,
+      length,
+      fit: "cover",
+      ...(transition ? { transition } : {}),
+    };
+  });
 
   const captionSegment = totalLength / draft.captions.length;
   const captionClips: ShotstackClip[] = draft.captions.map((c, i) => ({

@@ -5,6 +5,7 @@ import { generateTemplates } from "@/lib/ai/templates";
 import { generateHookIdeas } from "@/lib/ai/hooks";
 import { generateMarketingSuggestions } from "@/lib/ai/marketing";
 import { generateDraft } from "@/lib/ai/draft";
+import { generateHighlightCandidates } from "@/lib/ai/highlights";
 import type {
   BrandGuide,
   CalendarItem,
@@ -49,6 +50,8 @@ function buildSeedProject(): Project {
   const draft = generateDraft(selectedTemplate, selectedHook.text);
   const marketing = generateMarketingSuggestions({ goal, productName: "비즈 목걸이" });
   const now = new Date().toISOString();
+  const highlightCandidates = generateHighlightCandidates(660, targetLength);
+  const firstCandidate = highlightCandidates[0];
 
   return {
     id: nextId("proj"),
@@ -59,7 +62,7 @@ function buildSeedProject(): Project {
     targetLength,
     sourceFiles: [
       { name: "necklace_main.jpg", kind: "photo" },
-      { name: "making_process.mp4", kind: "video" },
+      { name: "making_process.mp4", kind: "video", durationSec: 660 },
     ],
     status: "수정중",
     templates,
@@ -69,6 +72,13 @@ function buildSeedProject(): Project {
     selectedHookId: selectedHook.id,
     marketing,
     feedback: [],
+    highlightCandidates,
+    highlight: {
+      sourceIndex: 1,
+      candidateId: firstCandidate.id,
+      start: firstCandidate.start,
+      end: firstCandidate.end,
+    },
     createdAt: now,
     updatedAt: now,
   };
