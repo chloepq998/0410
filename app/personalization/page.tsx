@@ -8,6 +8,8 @@ import {
 } from "@/lib/actions/personalization";
 import { Button, Card, SectionHeader } from "@/components/ui";
 
+export const dynamic = "force-dynamic";
+
 export default async function PersonalizationPage() {
   const references = await listReferences();
   const brandGuide = await getBrandGuide();

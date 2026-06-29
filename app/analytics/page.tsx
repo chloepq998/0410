@@ -6,6 +6,8 @@ import { resolveRange } from "@/lib/analytics-range";
 import { Badge, Button, Card, SectionHeader } from "@/components/ui";
 import TrendChart from "@/components/TrendChart";
 
+export const dynamic = "force-dynamic";
+
 export default async function AnalyticsPage({
   searchParams,
 }: {

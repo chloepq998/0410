@@ -5,6 +5,8 @@ import { deleteCalendarItemAction, updateCalendarItemAction } from "@/lib/action
 import CalendarItemForm from "@/components/CalendarItemForm";
 import { Button, Card } from "@/components/ui";
 
+export const dynamic = "force-dynamic";
+
 export default async function CalendarItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const item = await getCalendarItem(id);

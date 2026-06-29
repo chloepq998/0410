@@ -3,6 +3,8 @@ import { listCalendarItems } from "@/lib/store";
 import { buildMonthGrid, formatMonthParam, parseMonthParam, WEEKDAY_LABELS } from "@/lib/calendar-utils";
 import { Badge, Card, SectionHeader } from "@/components/ui";
 
+export const dynamic = "force-dynamic";
+
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const { month: monthParam } = await searchParams;
   const { year, month } = parseMonthParam(monthParam);

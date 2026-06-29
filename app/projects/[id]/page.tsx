@@ -13,6 +13,8 @@ import FeedbackForm from "@/components/FeedbackForm";
 import DraftEditForm from "@/components/DraftEditForm";
 import RenderPanel from "@/components/RenderPanel";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const project = await getProject(id);
