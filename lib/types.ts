@@ -7,6 +7,7 @@ export type Mood = "감성" | "정보" | "유머";
 export interface SourceFile {
   name: string;
   kind: "photo" | "video";
+  url?: string;
 }
 
 export interface Template {
@@ -29,11 +30,22 @@ export interface CaptionLine {
 export interface Draft {
   templateId: string;
   bgmId: string;
+  bgmUrl?: string;
   bgmVolume: number;
   captions: CaptionLine[];
   transitionIntensity: "낮음" | "중간" | "높음";
   cutPlan: string[];
   generatedAt: string;
+}
+
+export type RenderStatus = "대기중" | "렌더링중" | "완료" | "실패";
+
+export interface Render {
+  id?: string;
+  status: RenderStatus;
+  outputUrl?: string;
+  error?: string;
+  updatedAt: string;
 }
 
 export interface HookIdea {
@@ -77,6 +89,7 @@ export interface Project {
   selectedHookId?: string;
   marketing?: MarketingSuggestions;
   feedback: FeedbackEntry[];
+  render?: Render;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { getProject } from "@/lib/store";
-import { BGM_OPTIONS } from "@/lib/ai/bgm-options";
 import {
   applyHookAction,
   generateHookIdeasAction,
@@ -8,10 +7,11 @@ import {
   markProjectCompletedAction,
   regenerateTemplatesAction,
   selectTemplateAction,
-  updateDraftAction,
 } from "@/lib/actions/projects";
 import { Badge, Button, Card, SectionHeader } from "@/components/ui";
 import FeedbackForm from "@/components/FeedbackForm";
+import DraftEditForm from "@/components/DraftEditForm";
+import RenderPanel from "@/components/RenderPanel";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,6 +19,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   if (!project) notFound();
 
   const selectedTemplate = project.templates.find((t) => t.id === project.selectedTemplateId);
+  const hasRealSources = project.sourceFiles.some((f) => f.url);
 
   return (
     <div className="space-y-6">
@@ -92,62 +93,25 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 ))}
               </ol>
             </div>
-            <form action={updateDraftAction.bind(null, project.id)} className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-neutral-700">자막</p>
-                <div className="mt-2 space-y-3">
-                  {project.draft.captions.map((c) => (
-                    <div key={c.id} className="rounded-lg border border-neutral-200 p-3">
-                      <input
-                        name={`caption_${c.id}_text`}
-                        defaultValue={c.text}
-                        className="w-full rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
-                      />
-                      <div className="mt-2 flex gap-2">
-                        <select name={`caption_${c.id}_position`} defaultValue={c.position} className="rounded-md border border-neutral-300 px-2 py-1 text-xs">
-                          <option value="상단">상단</option>
-                          <option value="중단">중단</option>
-                          <option value="하단">하단</option>
-                        </select>
-                        <select name={`caption_${c.id}_style`} defaultValue={c.style} className="rounded-md border border-neutral-300 px-2 py-1 text-xs">
-                          <option value="감성">감성</option>
-                          <option value="미니멀">미니멀</option>
-                          <option value="키치">키치</option>
-                        </select>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-neutral-700">BGM</p>
-                <select name="bgmId" defaultValue={project.draft.bgmId} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
-                  {BGM_OPTIONS.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.mood} · {b.license})
-                    </option>
-                  ))}
-                </select>
-                <label className="mt-2 block text-xs text-neutral-500">음량 {project.draft.bgmVolume}</label>
-                <input type="range" name="bgmVolume" min={0} max={100} defaultValue={project.draft.bgmVolume} className="w-full" />
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-neutral-700">전환 효과 강도</p>
-                <div className="mt-1 flex gap-2">
-                  {(["낮음", "중간", "높음"] as const).map((level) => (
-                    <label key={level} className="flex items-center gap-1.5 text-sm text-neutral-600">
-                      <input type="radio" name="transitionIntensity" value={level} defaultChecked={project.draft!.transitionIntensity === level} />
-                      {level}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <Button type="submit">편집 내용 저장</Button>
-            </form>
+            <DraftEditForm projectId={project.id} draft={project.draft} />
           </div>
+        </Card>
+      )}
+
+      {/* 실제 영상 렌더링 */}
+      {project.draft && selectedTemplate && (
+        <Card>
+          <SectionHeader
+            title="실제 영상 렌더링"
+            description="업로드한 소스와 자막/BGM/전환 설정을 합성해 실제 영상 파일을 생성합니다."
+          />
+          {hasRealSources ? (
+            <RenderPanel projectId={project.id} render={project.render} />
+          ) : (
+            <p className="text-sm text-neutral-400">
+              실제 업로드된 소스 파일(사진/영상)이 없어 렌더링할 수 없습니다. 새 프로젝트를 만들 때 파일을 직접 업로드해주세요.
+            </p>
+          )}
         </Card>
       )}
 

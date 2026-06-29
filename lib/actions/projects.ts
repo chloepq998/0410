@@ -8,7 +8,7 @@ import { generateTemplates } from "@/lib/ai/templates";
 import { generateHookIdeas } from "@/lib/ai/hooks";
 import { generateMarketingSuggestions } from "@/lib/ai/marketing";
 import { generateDraft } from "@/lib/ai/draft";
-import type { CaptionLine, Goal, LengthSec, Project, Tone } from "@/lib/types";
+import type { CaptionLine, Goal, LengthSec, Project, SourceFile, Tone } from "@/lib/types";
 
 export async function createProjectAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
@@ -16,10 +16,7 @@ export async function createProjectAction(formData: FormData) {
   const goal = String(formData.get("goal") ?? "판매") as Goal;
   const tone = String(formData.get("tone") ?? "발랄") as Tone;
   const targetLength = Number(formData.get("targetLength") ?? 10) as LengthSec;
-  const fileNames = String(formData.get("fileNames") ?? "")
-    .split(",")
-    .map((f) => f.trim())
-    .filter(Boolean);
+  const sourceFiles = JSON.parse(String(formData.get("sourceFiles") ?? "[]")) as SourceFile[];
 
   if (!name) return;
 
@@ -32,10 +29,7 @@ export async function createProjectAction(formData: FormData) {
     goal,
     tone,
     targetLength,
-    sourceFiles: fileNames.map((f) => ({
-      name: f,
-      kind: /\.(mp4|mov|webm)$/i.test(f) ? "video" : "photo",
-    })),
+    sourceFiles,
     status: "초안",
     templates,
     hookIdeas: [],
@@ -75,6 +69,8 @@ export async function updateDraftAction(projectId: string, formData: FormData) {
 
   const bgmId = String(formData.get("bgmId") ?? project.draft.bgmId);
   const bgmVolume = Number(formData.get("bgmVolume") ?? project.draft.bgmVolume);
+  const bgmUrlRaw = formData.get("bgmUrl");
+  const bgmUrl = bgmUrlRaw !== null ? String(bgmUrlRaw) || undefined : project.draft.bgmUrl;
   const transitionIntensity = String(formData.get("transitionIntensity") ?? project.draft.transitionIntensity) as
     | "낮음"
     | "중간"
@@ -93,7 +89,7 @@ export async function updateDraftAction(projectId: string, formData: FormData) {
   });
 
   await store.updateProject(projectId, {
-    draft: { ...project.draft, bgmId, bgmVolume, transitionIntensity, captions },
+    draft: { ...project.draft, bgmId, bgmUrl, bgmVolume, transitionIntensity, captions },
   });
   revalidatePath(`/projects/${projectId}`);
 }

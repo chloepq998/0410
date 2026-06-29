@@ -21,6 +21,9 @@ const BADGE_COLORS: Record<string, string> = {
   아이디어: "bg-neutral-100 text-neutral-600",
   제작중: "bg-amber-100 text-amber-700",
   게시완료: "bg-emerald-100 text-emerald-700",
+  대기중: "bg-neutral-100 text-neutral-600",
+  렌더링중: "bg-amber-100 text-amber-700",
+  실패: "bg-rose-100 text-rose-700",
 };
 
 export function Badge({ children }: { children: string }) {

@@ -1,15 +1,46 @@
 "use client";
 
 import { useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { createProjectAction } from "@/lib/actions/projects";
 import { Button, Card } from "@/components/ui";
 
 export default function NewProjectForm() {
-  const [fileNames, setFileNames] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const formData = new FormData(e.currentTarget);
+
+    setUploading(true);
+    try {
+      const sourceFiles = await Promise.all(
+        files.map(async (file) => {
+          const blob = await upload(file.name, file, {
+            access: "public",
+            handleUploadUrl: "/api/upload",
+          });
+          return {
+            name: file.name,
+            kind: file.type.startsWith("video/") ? "video" : "photo",
+            url: blob.url,
+          };
+        })
+      );
+      formData.set("sourceFiles", JSON.stringify(sourceFiles));
+      await createProjectAction(formData);
+    } catch {
+      setError("파일 업로드에 실패했습니다. 다시 시도해주세요.");
+      setUploading(false);
+    }
+  }
 
   return (
     <Card>
-      <form action={createProjectAction} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-sm font-medium text-neutral-700">프로젝트 이름</label>
           <input
@@ -36,18 +67,17 @@ export default function NewProjectForm() {
             type="file"
             multiple
             accept="image/*,video/*"
-            onChange={(e) => setFileNames(Array.from(e.target.files ?? []).map((f) => f.name))}
+            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
             className="mt-1 block w-full text-sm text-neutral-600"
           />
-          <p className="mt-1 text-xs text-neutral-400">권장 비율 9:16, 권장 길이 5~15초. 업로드된 파일은 데모에서 실제 저장되지 않습니다.</p>
-          {fileNames.length > 0 && (
+          <p className="mt-1 text-xs text-neutral-400">권장 비율 9:16, 권장 길이 5~15초. 업로드한 영상은 실제 자동 편집에 사용됩니다.</p>
+          {files.length > 0 && (
             <ul className="mt-2 list-inside list-disc text-xs text-neutral-500">
-              {fileNames.map((f) => (
-                <li key={f}>{f}</li>
+              {files.map((f) => (
+                <li key={f.name}>{f.name}</li>
               ))}
             </ul>
           )}
-          <input type="hidden" name="fileNames" value={fileNames.join(",")} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -77,7 +107,11 @@ export default function NewProjectForm() {
           </div>
         </div>
 
-        <Button type="submit">프로젝트 생성하고 템플릿 추천받기</Button>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <Button type="submit" disabled={uploading}>
+          {uploading ? "소스 업로드 중..." : "프로젝트 생성하고 템플릿 추천받기"}
+        </Button>
       </form>
     </Card>
   );
