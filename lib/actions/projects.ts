@@ -151,8 +151,30 @@ export async function updateDraftAction(projectId: string, formData: FormData) {
     | "중간"
     | "높음";
 
+  const targetLength = project.targetLength;
+  const bgmStartRaw = Number(formData.get("bgmStart") ?? project.draft.bgmStart);
+  const bgmEndRaw = Number(formData.get("bgmEnd") ?? project.draft.bgmEnd);
+  const bgmStart = Math.max(0, Math.min(bgmStartRaw, targetLength));
+  const bgmEnd = Math.max(bgmStart, Math.min(bgmEndRaw, targetLength));
+  const autoEffectsEnabled = formData.get("autoEffectsEnabled") === "on";
+  const sfxIdRaw = String(formData.get("sfxId") ?? project.draft.sfxId ?? "");
+  const sfxId = sfxIdRaw || undefined;
+  const sfxUrlRaw = formData.get("sfxUrl");
+  const sfxUrl = sfxUrlRaw !== null ? String(sfxUrlRaw) || undefined : project.draft.sfxUrl;
+
   await store.updateProject(projectId, {
-    draft: { ...project.draft, bgmId, bgmUrl, bgmVolume, transitionIntensity },
+    draft: {
+      ...project.draft,
+      bgmId,
+      bgmUrl,
+      bgmVolume,
+      bgmStart,
+      bgmEnd,
+      transitionIntensity,
+      autoEffectsEnabled,
+      sfxId,
+      sfxUrl,
+    },
   });
   revalidatePath(`/projects/${projectId}`);
 }

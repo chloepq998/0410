@@ -72,6 +72,11 @@ export interface Draft {
   bgmId: string;
   bgmUrl?: string;
   bgmVolume: number;
+  bgmStart: number;
+  bgmEnd: number;
+  autoEffectsEnabled: boolean;
+  sfxId?: string;
+  sfxUrl?: string;
   captions: CaptionLine[];
   transitionIntensity: "낮음" | "중간" | "높음";
   cutPlan: string[];

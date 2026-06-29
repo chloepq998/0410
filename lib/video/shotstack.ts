@@ -14,7 +14,6 @@ interface ShotstackClip {
 
 interface ShotstackTimeline {
   background?: string;
-  soundtrack?: { src: string; effect?: string; volume?: number };
   tracks: { clips: ShotstackClip[] }[];
 }
 
@@ -54,12 +53,16 @@ const RESOLUTION_MAP: Record<RenderResolution, string> = {
   "1080p": "1080",
 };
 
-// Maps our `Draft` (cut plan, captions, BGM) onto a Shotstack timeline. Source
-// files carry no explicit timing, so video clips are spread evenly across the
-// project's target length; captions instead use the start/end timecodes
+// Maps our `Draft` (cut plan, captions, BGM, effects) onto a Shotstack timeline.
+// Source files carry no explicit timing, so video clips are spread evenly across
+// the project's target length; captions instead use the start/end timecodes
 // already assigned during generation (see lib/ai/draft.ts). If a highlight
 // selection exists for one of the sources, that clip's playback is trimmed to
 // the selected window via Shotstack's `asset.trim` + a capped `length`.
+// BGM is placed as a dedicated audio clip (not the global `timeline.soundtrack`,
+// which has no start/end control) so the user-adjustable bgmStart/bgmEnd window
+// is honored. When autoEffectsEnabled is on, visual transitions are applied and
+// a short SFX clip (if uploaded) is inserted at each cut boundary.
 export function buildTimeline(
   project: Project,
   resolution: RenderResolution = "1080p",
@@ -73,7 +76,7 @@ export function buildTimeline(
 
   const totalLength = project.targetLength;
   const clipLength = totalLength / sources.length;
-  const transition = transitionFor(draft.transitionIntensity);
+  const transition = draft.autoEffectsEnabled ? transitionFor(draft.transitionIntensity) : undefined;
   const highlightSource = project.highlight ? project.sourceFiles[project.highlight.sourceIndex] : undefined;
 
   const videoClips: ShotstackClip[] = sources.map((file, i) => {
@@ -113,18 +116,40 @@ export function buildTimeline(
     position: TITLE_POSITION[c.position],
   }));
 
+  // BGM은 timeline.soundtrack(전체 구간 고정, start/end 조절 불가) 대신 별도
+  // 오디오 클립으로 배치해 사용자가 조절한 bgmStart/bgmEnd 구간만 재생되게 한다.
+  const audioClips: ShotstackClip[] = [];
+  if (draft.bgmUrl) {
+    const bgmStart = Math.max(0, Math.min(draft.bgmStart, totalLength));
+    const bgmEnd = Math.max(bgmStart, Math.min(draft.bgmEnd, totalLength));
+    audioClips.push({
+      asset: {
+        type: "audio",
+        src: draft.bgmUrl,
+        effect: "fadeInFadeOut",
+        volume: Math.min(1, Math.max(0, draft.bgmVolume / 100)),
+      },
+      start: bgmStart,
+      length: Math.max(0.1, bgmEnd - bgmStart),
+    });
+  }
+
+  // 자동 효과가 켜져 있고 효과음 파일이 등록된 경우, 첫 컷을 제외한 각 컷 전환
+  // 시점마다 짧은 효과음 클립을 삽입한다.
+  if (draft.autoEffectsEnabled && draft.sfxUrl) {
+    for (let i = 1; i < videoClips.length; i++) {
+      audioClips.push({
+        asset: { type: "audio", src: draft.sfxUrl, volume: 0.8 },
+        start: Math.max(0, videoClips[i].start - 0.15),
+        length: 0.4,
+      });
+    }
+  }
+
   const timeline: ShotstackTimeline = {
     background: "#000000",
-    tracks: [{ clips: captionClips }, { clips: videoClips }],
+    tracks: [{ clips: captionClips }, { clips: videoClips }, ...(audioClips.length ? [{ clips: audioClips }] : [])],
   };
-
-  if (draft.bgmUrl) {
-    timeline.soundtrack = {
-      src: draft.bgmUrl,
-      effect: "fadeInFadeOut",
-      volume: Math.min(1, Math.max(0, draft.bgmVolume / 100)),
-    };
-  }
 
   return {
     timeline,

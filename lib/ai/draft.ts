@@ -1,5 +1,6 @@
 import type { CaptionFontSize, CaptionLine, CaptionPreset, Draft, Template } from "@/lib/types";
 import { nextId } from "@/lib/id";
+import { recommendBgm, recommendSfx } from "@/lib/ai/bgm-options";
 
 const BODY_LINE_POOL = [
   "핸드메이드로 한 땀 한 땀 완성했어요",
@@ -68,10 +69,18 @@ export function generateDraft(template: Template, hookText?: string): Draft {
     return `컷 ${i + 1}: 제품/제작 과정 디테일 컷`;
   });
 
+  // 영상 분위기(template.mood)를 기준으로 BGM·효과음을 추천해 자동 적용한다.
+  const bgm = recommendBgm(template.mood);
+  const sfx = recommendSfx(template.mood);
+
   return {
     templateId: template.id,
-    bgmId: template.bgmId,
+    bgmId: bgm.id,
     bgmVolume: 70,
+    bgmStart: 0,
+    bgmEnd: targetLength,
+    autoEffectsEnabled: true,
+    sfxId: sfx.id,
     captions,
     transitionIntensity: template.elements.transition ? "중간" : "낮음",
     cutPlan,

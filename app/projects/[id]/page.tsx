@@ -127,7 +127,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 ))}
               </ol>
             </div>
-            <DraftEditForm projectId={project.id} draft={project.draft} />
+            <DraftEditForm
+              projectId={project.id}
+              draft={project.draft}
+              mood={selectedTemplate.mood}
+              targetLength={project.targetLength}
+            />
           </div>
         </Card>
       )}

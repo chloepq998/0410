@@ -3,39 +3,98 @@
 import { useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { updateDraftAction } from "@/lib/actions/projects";
-import { BGM_OPTIONS } from "@/lib/ai/bgm-options";
+import { SFX_OPTIONS, recommendBgmList } from "@/lib/ai/bgm-options";
 import { Button } from "@/components/ui";
-import type { Draft } from "@/lib/types";
+import type { Draft, Mood } from "@/lib/types";
 
-export default function DraftEditForm({ projectId, draft }: { projectId: string; draft: Draft }) {
+export default function DraftEditForm({
+  projectId,
+  draft,
+  mood,
+  targetLength,
+}: {
+  projectId: string;
+  draft: Draft;
+  mood: Mood;
+  targetLength: number;
+}) {
   const [bgmUrl, setBgmUrl] = useState(draft.bgmUrl ?? "");
   const [bgmFileName, setBgmFileName] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [bgmUploading, setBgmUploading] = useState(false);
+
+  const [sfxUrl, setSfxUrl] = useState(draft.sfxUrl ?? "");
+  const [sfxFileName, setSfxFileName] = useState<string | null>(null);
+  const [sfxUploading, setSfxUploading] = useState(false);
+
+  const sortedBgmOptions = recommendBgmList(mood);
+  const recommendedBgmId = sortedBgmOptions[0]?.id;
 
   async function handleBgmUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
+    setBgmUploading(true);
     try {
       const blob = await upload(file.name, file, { access: "public", handleUploadUrl: "/api/upload" });
       setBgmUrl(blob.url);
       setBgmFileName(file.name);
     } finally {
-      setUploading(false);
+      setBgmUploading(false);
+    }
+  }
+
+  async function handleSfxUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSfxUploading(true);
+    try {
+      const blob = await upload(file.name, file, { access: "public", handleUploadUrl: "/api/upload" });
+      setSfxUrl(blob.url);
+      setSfxFileName(file.name);
+    } finally {
+      setSfxUploading(false);
     }
   }
 
   return (
     <form action={updateDraftAction.bind(null, projectId)} className="space-y-4">
       <div>
-        <p className="text-sm font-medium text-neutral-700">BGM</p>
+        <p className="text-sm font-medium text-neutral-700">배경 음악 (영상 분위기 기반 추천)</p>
         <select name="bgmId" defaultValue={draft.bgmId} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
-          {BGM_OPTIONS.map((b) => (
+          {sortedBgmOptions.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.name} ({b.mood} · {b.license})
+              {b.id === recommendedBgmId ? "⭐ 추천 · " : ""}
+              {b.name} ({b.mood} · {b.tempo} · {b.license})
             </option>
           ))}
         </select>
+
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <label className="block text-xs text-neutral-500">
+            재생 시작(초)
+            <input
+              type="number"
+              name="bgmStart"
+              min={0}
+              max={targetLength}
+              step={0.5}
+              defaultValue={draft.bgmStart}
+              className="mt-0.5 w-full rounded-md border border-neutral-300 px-2 py-1 text-sm"
+            />
+          </label>
+          <label className="block text-xs text-neutral-500">
+            재생 종료(초)
+            <input
+              type="number"
+              name="bgmEnd"
+              min={0}
+              max={targetLength}
+              step={0.5}
+              defaultValue={draft.bgmEnd}
+              className="mt-0.5 w-full rounded-md border border-neutral-300 px-2 py-1 text-sm"
+            />
+          </label>
+        </div>
+
         <label className="mt-2 block text-xs text-neutral-500">음량 {draft.bgmVolume}</label>
         <input type="range" name="bgmVolume" min={0} max={100} defaultValue={draft.bgmVolume} className="w-full" />
 
@@ -43,7 +102,7 @@ export default function DraftEditForm({ projectId, draft }: { projectId: string;
           <label className="block text-xs font-medium text-neutral-600">실제 렌더링에 쓸 BGM 파일 직접 업로드 (선택)</label>
           <input type="file" accept="audio/*" onChange={handleBgmUpload} className="mt-1 block w-full text-xs text-neutral-600" />
           <p className="mt-1 text-xs text-neutral-400">
-            {uploading
+            {bgmUploading
               ? "업로드 중..."
               : bgmUrl
                 ? `등록됨: ${bgmFileName ?? "업로드된 파일"}`
@@ -63,9 +122,38 @@ export default function DraftEditForm({ projectId, draft }: { projectId: string;
             </label>
           ))}
         </div>
+        <label className="mt-2 flex items-center gap-1.5 text-xs text-neutral-600">
+          <input type="checkbox" name="autoEffectsEnabled" defaultChecked={draft.autoEffectsEnabled} />
+          전환 효과 · 효과음 자동 삽입 켜기
+        </label>
       </div>
 
-      <Button type="submit" disabled={uploading}>
+      <div>
+        <p className="text-sm font-medium text-neutral-700">강조 구간 효과음 (영상 분위기 기반 추천)</p>
+        <select name="sfxId" defaultValue={draft.sfxId ?? ""} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
+          <option value="">사용 안 함</option>
+          {SFX_OPTIONS.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name} — {s.description}
+            </option>
+          ))}
+        </select>
+
+        <div className="mt-3 rounded-lg border border-dashed border-neutral-300 p-3">
+          <label className="block text-xs font-medium text-neutral-600">실제 렌더링에 쓸 효과음 파일 직접 업로드 (선택)</label>
+          <input type="file" accept="audio/*" onChange={handleSfxUpload} className="mt-1 block w-full text-xs text-neutral-600" />
+          <p className="mt-1 text-xs text-neutral-400">
+            {sfxUploading
+              ? "업로드 중..."
+              : sfxUrl
+                ? `등록됨: ${sfxFileName ?? "업로드된 파일"}`
+                : "효과음 선택은 참고용 메모입니다. 전환 구간에 실제 효과음을 넣으려면 보유한 효과음 파일을 직접 업로드하세요."}
+          </p>
+          <input type="hidden" name="sfxUrl" value={sfxUrl} />
+        </div>
+      </div>
+
+      <Button type="submit" disabled={bgmUploading || sfxUploading}>
         편집 내용 저장
       </Button>
     </form>
