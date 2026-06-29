@@ -49,12 +49,18 @@ export interface Draft {
 }
 
 export type RenderStatus = "대기중" | "렌더링중" | "완료" | "실패";
+export type RenderResolution = "720p" | "1080p";
+export type RenderAspectRatio = "9:16" | "16:9" | "1:1";
 
 export interface Render {
   id?: string;
   status: RenderStatus;
   outputUrl?: string;
   error?: string;
+  resolution?: RenderResolution;
+  aspectRatio?: RenderAspectRatio;
+  progressStage?: string;
+  startedAt?: string;
   updatedAt: string;
 }
 

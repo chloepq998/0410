@@ -1,4 +1,4 @@
-import type { CaptionLine, Draft, Project, Render, RenderStatus } from "@/lib/types";
+import type { CaptionLine, Draft, Project, Render, RenderAspectRatio, RenderResolution, RenderStatus } from "@/lib/types";
 
 const SHOTSTACK_HOST =
   process.env.SHOTSTACK_ENV === "production" ? "https://api.shotstack.io/v1" : "https://api.shotstack.io/stage";
@@ -41,10 +41,21 @@ function transitionFor(intensity: Draft["transitionIntensity"]): ShotstackClip["
   return { in: "zoom", out: "fade" };
 }
 
+// Shotstack's `output.resolution` enum: preview/mobile/sd/hd/1080. We only
+// expose 720p/1080p as export options, mapped to Shotstack's "hd"/"1080".
+const RESOLUTION_MAP: Record<RenderResolution, string> = {
+  "720p": "hd",
+  "1080p": "1080",
+};
+
 // Maps our `Draft` (cut plan, captions, BGM) onto a Shotstack timeline. Source
 // files and captions carry no explicit timing, so clips/captions are spread
 // evenly across the project's target length.
-export function buildTimeline(project: Project): ShotstackEdit {
+export function buildTimeline(
+  project: Project,
+  resolution: RenderResolution = "1080p",
+  aspectRatio: RenderAspectRatio = "9:16"
+): ShotstackEdit {
   const draft = project.draft;
   if (!draft) throw new Error("초안이 없는 프로젝트는 렌더링할 수 없습니다.");
 
@@ -95,8 +106,8 @@ export function buildTimeline(project: Project): ShotstackEdit {
     timeline,
     output: {
       format: "mp4",
-      resolution: "sd",
-      aspectRatio: "9:16",
+      resolution: RESOLUTION_MAP[resolution],
+      aspectRatio,
     },
   };
 }
@@ -110,13 +121,18 @@ function requireApiKey(): string {
 // Builds the timeline from the project's draft and submits it to Shotstack,
 // returning a `Render` patch on success or failure. Shared by the manual
 // "다시 렌더링" action and the automated edit-and-render flow.
-export async function renderProject(project: Project): Promise<Render> {
+export async function renderProject(
+  project: Project,
+  resolution: RenderResolution = "1080p",
+  aspectRatio: RenderAspectRatio = "9:16"
+): Promise<Render> {
+  const now = new Date().toISOString();
   try {
-    const edit = buildTimeline(project);
+    const edit = buildTimeline(project, resolution, aspectRatio);
     const renderId = await submitRender(edit);
-    return { id: renderId, status: "대기중", updatedAt: new Date().toISOString() };
+    return { id: renderId, status: "대기중", resolution, aspectRatio, startedAt: now, updatedAt: now };
   } catch (error) {
-    return { status: "실패", error: (error as Error).message, updatedAt: new Date().toISOString() };
+    return { status: "실패", resolution, aspectRatio, error: (error as Error).message, updatedAt: now };
   }
 }
 
@@ -147,7 +163,7 @@ const STATUS_MAP: Record<string, RenderStatus> = {
 
 export async function getRenderStatus(
   renderId: string
-): Promise<{ status: RenderStatus; outputUrl?: string; error?: string }> {
+): Promise<{ status: RenderStatus; stage: string; outputUrl?: string; error?: string }> {
   const apiKey = requireApiKey();
 
   const res = await fetch(`${SHOTSTACK_HOST}/render/${renderId}`, {
@@ -162,6 +178,7 @@ export async function getRenderStatus(
   const shotstackStatus = json?.response?.status as string;
   return {
     status: STATUS_MAP[shotstackStatus] ?? "렌더링중",
+    stage: shotstackStatus,
     outputUrl: json?.response?.url,
     error: shotstackStatus === "failed" ? (json?.response?.error ?? "알 수 없는 오류") : undefined,
   };
